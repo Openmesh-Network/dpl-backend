@@ -112,21 +112,25 @@ export class XnodesService {
     if (user.validationCloudAPIKeyEthereum != null) {
       // 4 is arbitrary just wanna keep this temp code future proof
       if (user.validationCloudAPIKeyEthereum.length > 4) {
-        // NOTE(Tomas): Not sure if this is correct way to clone in Typescript. 
+        // NOTE(Tomas): Not sure if this is correct way to clone in Typescript.
         //  Bruno you're the master this is also your house up to you
         let scuffedPayload = structuredClone(defaultSourcePayload);
 
         let apiKey = user.validationCloudAPIKeyEthereum;
 
         // NOTE(Tomas): Docs aren't that easy to interpret, chatgpt said env variables set like this are added as OS env variables on the container. ( it works I promise :) )
-        scuffedPayload.args += ' --set env.ETHEREUM_NODE_WS_URL=https://mainnet.ethereum.validationcloud.io/v1/wss/' + apiKey
-        scuffedPayload.args += ' --set env.ETHEREUM_NODE_HTTP_URL=wss://mainnet.ethereum.validationcloud.io/v1/' + apiKey
-        scuffedPayload.args += ' --set env.ETHEREUM_NODE_SECRET=' + apiKey
+        scuffedPayload.args +=
+          ' --set env.ETHEREUM_NODE_WS_URL=https://mainnet.ethereum.validationcloud.io/v1/wss/' +
+          apiKey;
+        scuffedPayload.args +=
+          ' --set env.ETHEREUM_NODE_HTTP_URL=wss://mainnet.ethereum.validationcloud.io/v1/' +
+          apiKey;
+        scuffedPayload.args += ' --set env.ETHEREUM_NODE_SECRET=' + apiKey;
 
-        // NOTE(Tomas): Has to have at least one workload. 
-        //  Here we piggyback off of ethereum since it's the closest config. 
+        // NOTE(Tomas): Has to have at least one workload.
+        //  Here we piggyback off of ethereum since it's the closest config.
         //  Ideally all this code would be abstracted/burned.
-        scuffedPayload.workloads = [ 'ethereum' ]
+        scuffedPayload['workloads'] = ['ethereum'];
 
         finalFeatures.push(scuffedPayload);
       }
