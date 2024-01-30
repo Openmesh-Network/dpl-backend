@@ -450,6 +450,26 @@ export class UpdatesService {
           blockNumber: String(event['blockNumber']),
         },
       });
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.create({
+          data: {
+            name: 'ApplicationCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['logIndex']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log('now getting all accepted applications from events log');
     await this.updateApplicationsAcceptedFromTask(Number(taskId));
@@ -524,6 +544,26 @@ export class UpdatesService {
           accepted: true,
         },
       });
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.create({
+          data: {
+            name: 'ApplicationAccepted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['logIndex']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log(
       'now getting all applications taken (task taken) from events log',
@@ -610,6 +650,28 @@ export class UpdatesService {
           taskTaken: true,
         },
       });
+
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.create({
+          data: {
+            name: 'TaskTaken',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['logIndex']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
+
       await this.utilsService.updatesJobSuccess(event['args'][3]);
     }
     console.log('now getting all submissions created from events log');
