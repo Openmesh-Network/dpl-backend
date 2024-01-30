@@ -115,7 +115,7 @@ export class XnodesService {
       if (user.validationCloudAPIKeyEthereum.length > 4) {
         // NOTE(Tomas): Not sure if this is correct way to clone in Typescript.
         //  Bruno you're the master this is also your house up to you
-        let scuffedPayload = cloneDeep(defaultSourcePayload);
+        let scuffedPayload = { ...defaultSourcePayload };
 
         let apiKey = user.validationCloudAPIKeyEthereum;
 
