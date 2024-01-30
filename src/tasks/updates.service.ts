@@ -237,6 +237,11 @@ export class UpdatesService {
       console.log(application[3]);
       console.log('another one');
       console.log(application?.at(3)?.at(0));
+      console.log('next 321');
+      console.log(application?.at(3)?.at(0).at(2));
+      console.log('next 123');
+      console.log(application?.at(3)?.at(0).at(2).at('hex'));
+
       // console.log(Number(application[3][0][2]['hex']));
 
       console.log('and now the task payments');
