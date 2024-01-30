@@ -74,6 +74,7 @@ export class UpdatesService {
     });
 
     for (let i = 0; i < Number(taskCount); i++) {
+      console.log('called the single task data ' + i);
       await this.updateSingleTaskData(i);
     }
   }
