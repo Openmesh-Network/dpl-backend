@@ -581,7 +581,7 @@ export class UpdatesService {
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
-            address: event['args'][5],
+            address: event['args'][2],
             timestamp: event['timestamp'],
           },
           create: {
@@ -591,7 +591,7 @@ export class UpdatesService {
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
-            address: event['args'][5],
+            address: event['args'][2],
             timestamp: event['timestamp'],
           },
         });
@@ -862,7 +862,7 @@ export class UpdatesService {
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
-            address: event['args'][3],
+            address: event['args'][4],
             timestamp: event['timestamp'],
           },
           create: {
@@ -872,7 +872,7 @@ export class UpdatesService {
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
-            address: event['args'][3],
+            address: event['args'][4],
             timestamp: event['timestamp'],
           },
         });
