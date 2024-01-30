@@ -240,7 +240,7 @@ export class UpdatesService {
       console.log('next 321');
       console.log(application?.at(3)?.at(0).at(2));
       console.log('next 123');
-      console.log(application?.at(3)?.at(0).at(2).at('hex'));
+      console.log(application?.at(3)?.at(0).at(2)?.hex);
 
       // console.log(Number(application[3][0][2]['hex']));
 
@@ -252,7 +252,7 @@ export class UpdatesService {
         console.log('getting the estimated budget of payments');
         for (let i = 0; i < task.payments.length; i++) {
           task.payments[i].amount = String(
-            Number(application?.at(3)?.at(i)?.at(2)?.at('hex')),
+            Number(application?.at(3)?.at(i)?.at(2)?.hex),
           );
         }
         console.log('budget for budgetApplication');
