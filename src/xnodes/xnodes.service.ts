@@ -20,7 +20,7 @@ Decimal.set({ precision: 60 });
 import Hex from 'crypto-js/enc-hex';
 import hmacSHA1 from 'crypto-js/hmac-sha1';
 import { createHmac } from 'crypto';
-import _ from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 import { PrismaService } from '../database/prisma.service';
 import { Request, response } from 'express';
@@ -115,7 +115,7 @@ export class XnodesService {
       if (user.validationCloudAPIKeyEthereum.length > 4) {
         // NOTE(Tomas): Not sure if this is correct way to clone in Typescript.
         //  Bruno you're the master this is also your house up to you
-        let scuffedPayload = _.cloneDeep(defaultSourcePayload);
+        let scuffedPayload = cloneDeep(defaultSourcePayload);
 
         let apiKey = user.validationCloudAPIKeyEthereum;
 
