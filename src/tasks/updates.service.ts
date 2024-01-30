@@ -455,11 +455,28 @@ export class UpdatesService {
           event: event,
           contractAddress: newcontract.address,
         };
-        await this.prisma.event.create({
-          data: {
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
             name: 'ApplicationCreated',
             data: JSON.stringify(finalData),
-            eventIndex: String(event['logIndex']),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'ApplicationCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
@@ -549,11 +566,28 @@ export class UpdatesService {
           event: event,
           contractAddress: newcontract.address,
         };
-        await this.prisma.event.create({
-          data: {
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
             name: 'ApplicationAccepted',
             data: JSON.stringify(finalData),
-            eventIndex: String(event['logIndex']),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'ApplicationAccepted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
@@ -660,11 +694,28 @@ export class UpdatesService {
           event: event,
           contractAddress: newcontract.address,
         };
-        await this.prisma.event.create({
-          data: {
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
             name: 'TaskTaken',
             data: JSON.stringify(finalData),
-            eventIndex: String(event['logIndex']),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][3],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'TaskTaken',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
@@ -796,11 +847,28 @@ export class UpdatesService {
           event: event,
           contractAddress: newcontract.address,
         };
-        await this.prisma.event.create({
-          data: {
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
             name: 'SubmissionCreated',
             data: JSON.stringify(finalData),
-            eventIndex: String(event['logIndex']),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][3],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'SubmissionCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
@@ -910,11 +978,28 @@ export class UpdatesService {
           event: event,
           contractAddress: newcontract.address,
         };
-        await this.prisma.event.create({
-          data: {
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
             name: 'SubmissionReviewed',
             data: JSON.stringify(finalData),
-            eventIndex: String(event['logIndex']),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'SubmissionReviewed',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
@@ -1000,11 +1085,28 @@ export class UpdatesService {
           event: event,
           contractAddress: newcontract.address,
         };
-        await this.prisma.event.create({
-          data: {
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
             name: 'TaskCompleted',
             data: JSON.stringify(finalData),
-            eventIndex: String(event['logIndex']),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][1],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'TaskCompleted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
             transactionHash: event.transactionHash,
             blockNumber: String(event.blockNumber),
             taskId: String(taskId),
