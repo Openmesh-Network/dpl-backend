@@ -497,12 +497,12 @@ export class TasksResponseDto {
 }
 
 export class GetTaskDto {
+  @IsNotEmpty()
   @IsString()
   @ApiProperty({
     description: 'The chain task id',
     example: '2',
   })
-  @IsNotEmpty()
   id: string;
 }
 
