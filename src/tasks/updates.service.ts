@@ -561,6 +561,10 @@ export class UpdatesService {
             timestamp: event['timestamp'],
           },
         });
+        console.log(
+          'the task  ACCEPTED argss sSQDADDSNJQI0WQDIODQWMIN WQDIODNDQWNIOIQWNODNIDOQWINODQWIONWDQINOQWD111111111111111111111111111111111111111111111111',
+        );
+        console.log(event['args']);
       } catch (err) {
         console.log('error submiting application');
       }
@@ -668,6 +672,10 @@ export class UpdatesService {
             timestamp: event['timestamp'],
           },
         });
+        console.log(
+          'the task argss sSQDADDSNJQI0WQDIODQWMIN WQDIODNDQWNIOIQWNODNIDOQWINODQWIONWDQINOQWD111111111111111111111111111111111111111111111111',
+        );
+        console.log(event['args']);
       } catch (err) {
         console.log('error submiting application');
       }
