@@ -782,6 +782,27 @@ export class UpdatesService {
           transactionHash: event.transactionHash,
         },
       });
+
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.create({
+          data: {
+            name: 'TaskTaken',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['logIndex']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log('now getting all submissions reviews from events log');
     await this.updateSubmissionReviewedFromTask(Number(taskId));
