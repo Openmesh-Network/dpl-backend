@@ -396,11 +396,11 @@ export class UpdatesService {
       console.log('the event budget');
       console.log(event['args'][3][0]);
       console.log('more');
-      console.log(event['args'][3][0]['amount']);
+      console.log(event['args'][3][0]?.amount);
       try {
         //getting estimated budget
         for (let i = 0; i < task.payments.length; i++) {
-          task.payments[i].amount = String(event['args'][3][i]['amount']);
+          task.payments[i].amount = String(event['args'][3][i]?.amount);
         }
         console.log('budget for budgetApplication');
         console.log(task.payments);
