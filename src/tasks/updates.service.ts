@@ -239,9 +239,9 @@ export class UpdatesService {
       console.log('another one');
       console.log(application?.at(3)?.at(0));
       console.log('next 321');
-      console.log(application?.at(3)?.at(0).at(2));
+      console.log(application?.at(3)?.at(0)?.at(2));
       console.log('next 123');
-      console.log(application?.at(3)?.at(0).at(2)?.hex);
+      console.log(application?.at(3)?.at(0)?.at(2)?.hex);
 
       // console.log(Number(application[3][0][2]['hex']));
 
