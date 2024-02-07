@@ -466,6 +466,7 @@ model OpenmeshExpertUser {
   RecoverPassword     RecoverPassword[]
   ApplicationOffChain ApplicationOffChain[]
   Xnode               Xnode[]
+  PythiaChats         PythiaChat[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime? @updatedAt
@@ -612,4 +613,38 @@ model XnodeClaimActivities {
   updatedAt DateTime? @updatedAt
 
   @@map("xnodeClaimActivities")
+}
+
+model PythiaChat { 
+  id String @id @default(uuid())
+
+  wallet        String?
+  amount        String?
+  txStatus      String?
+  isClaimed     Boolean @default(false)
+
+  openmeshExpertUserId String   
+  openmeshExpertUser   OpenmeshExpertUser  @relation(fields: [openmeshExpertUserId], references: [id])
+
+  PythiaInputs   PythiaInput[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("pythiaChat")
+}
+
+model PythiaInput { 
+  id String @id @default(uuid())
+
+  userMessage   String? @db.Text  //the input that the user will create
+  response      String? @db.Text  // the answer that the llm model will give to the user
+
+  pythiaChatId String   
+  pythiaChat   PythiaChat  @relation(fields: [pythiaChatId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("pythiaInput")
 }
