@@ -618,11 +618,6 @@ model XnodeClaimActivities {
 model PythiaChat { 
   id String @id @default(uuid())
 
-  wallet        String?
-  amount        String?
-  txStatus      String?
-  isClaimed     Boolean @default(false)
-
   openmeshExpertUserId String   
   openmeshExpertUser   OpenmeshExpertUser  @relation(fields: [openmeshExpertUserId], references: [id])
 
