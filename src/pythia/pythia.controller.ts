@@ -60,7 +60,7 @@ export class PythiaController {
     name: 'X-Parse-Application-Id',
     description: 'Token mandatory to connect with the app',
   })
-  @Post('getUserChats')
+  @Get('getUserChats')
   getUserChats(@Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
