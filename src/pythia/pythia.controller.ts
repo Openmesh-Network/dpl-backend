@@ -34,7 +34,7 @@ import {
 @Controller('pythia/functions')
 export class PythiaController {
   constructor(private readonly pythiaService: PythiaService) {}
-
+  // new
   apiTokenKey = process.env.API_TOKEN_KEY;
   deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 
