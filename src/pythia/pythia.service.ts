@@ -142,6 +142,9 @@ export class PythiaService {
         id: dataBody.id,
         openmeshExpertUserId: user.id,
       },
+      include: {
+        PythiaInputs: true,
+      },
     });
 
     if (!pythiaChat) {
