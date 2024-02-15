@@ -299,11 +299,15 @@ export class UtilsService {
     console.log('the job success');
     console.log(jobSuccess);
     if (jobSuccess !== null) {
-      return await this.prisma.user.update({
+      return await this.prisma.user.upsert({
         where: {
           address: userAddress,
         },
-        data: {
+        update: {
+          jobSuccess: JSON.stringify(jobSuccess),
+        },
+        create: {
+          address: userAddress,
           jobSuccess: JSON.stringify(jobSuccess),
         },
       });

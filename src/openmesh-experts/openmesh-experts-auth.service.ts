@@ -37,6 +37,7 @@ import {
   ChangePasswordOpenmeshExpertUserDTO,
   ConfirmEmailDTO,
   CreateOpenmeshExpertUserDTO,
+  CreateOpenmeshExpertVerifiedContributorUserDTO,
   EmailRecoverPasswordDTO,
   LoginDTO,
   RecoverPasswordDTO,
@@ -134,6 +135,97 @@ export class OpenmeshExpertsAuthService {
     };
 
     await this.openmeshExpertsEmailManagerService.emailConfirmationAccount(
+      response.email,
+      id2,
+    );
+
+    //this.financeService.KYBBigData(response.id);
+    return userFinalReturn;
+  }
+
+  async createUserByVerifiedContributor(
+    data: CreateOpenmeshExpertVerifiedContributorUserDTO,
+  ) {
+    // const recaptchaValidated = await this.validateRecaptcha({
+    //   token: data.googleRecaptchaToken,
+    // });
+    // if (!recaptchaValidated) {
+    //   throw new BadRequestException('Recaptcha incorrect', {
+    //     cause: new Error(),
+    //     description: 'Recaptcha incorrect',
+    //   });
+    // }
+    const results = await this.prisma.openmeshExpertUser.findFirst({
+      where: {
+        email: data.email,
+      },
+    });
+    if (results) {
+      //if an account was already create with this email but the email was not confirmed,  we delete the old account and create a new one.
+      if (
+        results.confirmedEmail === false &&
+        Math.round(Number(results.createdAt) / 1000) + 86400 <
+          Math.round(Date.now() / 1000)
+      ) {
+        await this.prisma.openmeshExpertUser.delete({
+          where: {
+            id: results.id,
+          },
+        });
+      }
+      //if an account was already create with this email in less than 24 hours, we do not let it create another one.
+      else if (
+        results.confirmedEmail === false &&
+        Math.round(Number(results.createdAt) / 1000) + 86400 >=
+          Math.round(Date.now() / 1000)
+      ) {
+        throw new BadRequestException(
+          'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
+          {
+            cause: new Error(),
+            description:
+              'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
+          },
+        );
+      }
+      //If email is already in use:
+      else if (results.confirmedEmail) {
+        throw new BadRequestException('Email already in use', {
+          cause: new Error(),
+          description: 'Email already in use',
+        });
+      }
+    }
+
+    //generating password:
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(data.password, salt);
+
+    const id = crypto.randomBytes(54);
+    const id2 = id.toString('hex');
+    console.log('login');
+    const { password, googleRecaptchaToken, ...rest } = data;
+
+    const response = await this.prisma.openmeshExpertUser.create({
+      data: {
+        password: hashedPassword,
+        hashConfirmEmail: id2,
+        confirmedEmail: false,
+        registrationByVerifiedContributor: true,
+        ...rest,
+      },
+    });
+
+    const jwt = await this.jwtService.signAsync({ id: response.id });
+
+    // await this.emailSenderService.emailConfirmacaoConta(id2, data.email);
+
+    const userFinalReturn = {
+      email: response.email,
+      sessionToken: jwt,
+    };
+
+    await this.openmeshExpertsEmailManagerService.emailConfirmationAccountVC(
       response.email,
       id2,
     );
@@ -450,6 +542,8 @@ export class OpenmeshExpertsAuthService {
       id: user.id,
       email: user.email,
       equinixAPIKey: user.equinixAPIKey,
+      validationCloudAPIKeyEthereum: user.validationCloudAPIKeyEthereum,
+      validationCloudAPIKeyPolygon: user.validationCloudAPIKeyPolygon,
       firstName: user.firstName,
       lastName: user.lastName,
       companyName: user.companyName,

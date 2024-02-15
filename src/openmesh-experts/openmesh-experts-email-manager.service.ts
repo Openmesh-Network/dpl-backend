@@ -39,6 +39,31 @@ export class OpenmeshExpertsEmailManagerService {
       });
   }
 
+  async emailConfirmationAccountVC(email, objectId) {
+    console.log('chamado');
+    sgMail.setApiKey(this.sgApiKey);
+    console.log(this.sgApiKey);
+    const msg: any = {
+      to: email,
+      from: { email: 'hello@openmesh.network', name: 'Openmesh' },
+      template_id: 'd-183d3bcf1eb347a89b6ad211c707437c',
+      dynamic_template_data: {
+        objectId: objectId,
+      },
+    };
+    await sgMail
+      .send(msg)
+      .then(() => {
+        console.log('confirmed');
+        return 'email sent';
+      })
+      .catch(async (error) => {
+        console.log(`Error during email recover password - ${email}`);
+        console.log(error);
+        return error;
+      });
+  }
+
   async emailConfirmationAccount(email, objectId) {
     console.log('chamado');
     sgMail.setApiKey(this.sgApiKey);

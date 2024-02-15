@@ -20,6 +20,8 @@ model Task {
 
   status String? //The task status -> 0, 1, 2 - ['open', 'active', 'completed']
 
+  taskTaken Boolean @default(false) //If the task was taken
+
   type String? @default("Individual") //the type of the task -> individual or group
 
   skills String[] @default([]) //the skills of this task. ex: Frontend, Backend, Solidity
@@ -431,6 +433,8 @@ model OpenmeshExpertUser {
 
   equinixAPIKey String?
   aivenAPIKey String?
+  validationCloudAPIKeyEthereum String?
+  validationCloudAPIKeyPolygon String?
 
   companyName String?
   firstName String?
@@ -444,11 +448,14 @@ model OpenmeshExpertUser {
   description String?
   scheduleCalendlyLink String?
   profilePictureHash String?
+  walletAddress String? //when registering to become a verified contributor, user can input its wallet.
   isCompany Boolean @default(false) //if its not, it means its a individual.
 
   scheduleCall Boolean @default(false)
 
   userEnabled     Boolean @default(true)
+
+  registrationByVerifiedContributor   Boolean @default(false) //if the user registred to become a verified contributor
 
   confirmedEmail       Boolean?  @default(false)
   hashConfirmEmail    String?
@@ -460,6 +467,7 @@ model OpenmeshExpertUser {
   RecoverPassword     RecoverPassword[]
   ApplicationOffChain ApplicationOffChain[]
   Xnode               Xnode[]
+  PythiaChats         PythiaChat[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime? @updatedAt
@@ -606,4 +614,33 @@ model XnodeClaimActivities {
   updatedAt DateTime? @updatedAt
 
   @@map("xnodeClaimActivities")
+}
+
+model PythiaChat { 
+  id String @id @default(uuid())
+
+  openmeshExpertUserId String   
+  openmeshExpertUser   OpenmeshExpertUser  @relation(fields: [openmeshExpertUserId], references: [id])
+
+  PythiaInputs   PythiaInput[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("pythiaChat")
+}
+
+model PythiaInput { 
+  id String @id @default(uuid())
+
+  userMessage   String? @db.Text  //the input that the user will create
+  response      String? @db.Text  // the answer that the llm model will give to the user
+
+  pythiaChatId String   
+  pythiaChat   PythiaChat  @relation(fields: [pythiaChatId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("pythiaInput")
 }

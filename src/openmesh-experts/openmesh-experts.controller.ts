@@ -29,6 +29,7 @@ import {
   ChangePasswordOpenmeshExpertUserDTO,
   ConfirmEmailDTO,
   CreateOpenmeshExpertUserDTO,
+  CreateOpenmeshExpertVerifiedContributorUserDTO,
   EmailRecoverPasswordDTO,
   LoginDTO,
   LoginResponseDTO,
@@ -63,6 +64,26 @@ export class OpenmeshExpertsController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshExpertsAuthService.createUser(data);
+  }
+
+  @ApiOperation({
+    summary:
+      'Create an openmesh user if he wants to become a verified contributor',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('createUserByVerifiedContributor')
+  createUserByVerifiedContributor(
+    @Body() data: CreateOpenmeshExpertVerifiedContributorUserDTO,
+    @Req() req: Request,
+  ) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.openmeshExpertsAuthService.createUserByVerifiedContributor(
+      data,
+    );
   }
 
   @ApiOperation({

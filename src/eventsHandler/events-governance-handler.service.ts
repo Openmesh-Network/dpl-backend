@@ -43,6 +43,7 @@ export class EventsGovernanceHandlerService {
     private readonly usersService: UsersService,
     private readonly updatesGovernanceService: UpdatesGovernanceService,
   ) {
+    return;
     this.setupDraftListeners();
     this.setupNFTListeners();
     this.setupGovernanceListeners();

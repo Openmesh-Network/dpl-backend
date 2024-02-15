@@ -14,8 +14,6 @@ import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
 
 import { PrismaService } from '../database/prisma.service';
-import { Request, response } from 'express';
-import axios from 'axios';
 import {
   GetSubmissionDto,
   GetTaskDto,
@@ -57,6 +55,29 @@ export class UpdatesService {
   wEthTokenAddress = process.env.WETH_TOKEN_ADDRESS;
 
   statusOptions = ['open', 'active', 'completed', 'draft'];
+
+  async updateAllSingleTaskData() {
+    console.log('getting all tasks updateds task');
+    const walletEther = new ethers.Wallet(this.viewPrivateKey);
+    const connectedWallet = walletEther.connect(this.web3Provider);
+    const newcontract = new ethers.Contract(
+      this.taskContractAddress,
+      taskContractABI,
+      this.web3Provider,
+    );
+
+    const contractSigner = await newcontract.connect(connectedWallet);
+
+    let taskCount = 0;
+    await contractSigner.taskCount().then(function (response) {
+      taskCount = response;
+    });
+
+    for (let i = 0; i < Number(taskCount); i++) {
+      console.log('called the single task data ' + i);
+      await this.updateSingleTaskData(i);
+    }
+  }
 
   //updates a single task
   async updateSingleTaskData(id: number) {
@@ -216,8 +237,13 @@ export class UpdatesService {
       console.log('and the application payment');
       console.log(application[3]);
       console.log('another one');
-      console.log(application[3][0]);
-      console.log(Number(application[3][0][2]['hex']));
+      console.log(application?.at(3)?.at(0));
+      console.log('next 321');
+      console.log(application?.at(3)?.at(0)?.at(2));
+      console.log('next 123');
+      console.log(application?.at(3)?.at(0)?.at(2)?.hex);
+
+      // console.log(Number(application[3][0][2]['hex']));
 
       console.log('and now the task payments');
       console.log(task.payments);
@@ -226,7 +252,9 @@ export class UpdatesService {
       if (!applicationExists) {
         console.log('getting the estimated budget of payments');
         for (let i = 0; i < task.payments.length; i++) {
-          task.payments[i].amount = String(Number(application[3][i][2]['hex']));
+          task.payments[i].amount = String(
+            Number(application?.at(3)?.at(i)?.at(2)?.hex),
+          );
         }
         console.log('budget for budgetApplication');
         console.log(task.payments);
@@ -352,7 +380,7 @@ export class UpdatesService {
         );
       }
 
-      console.log('getting metadata if its exists');
+      console.log('getting metadata if its exists 22');
       let metadataData;
       try {
         if (String(event['args'][2]).length > 0) {
@@ -368,11 +396,11 @@ export class UpdatesService {
       console.log('the event budget');
       console.log(event['args'][3][0]);
       console.log('more');
-      console.log(event['args'][3][0]['amount']);
+      console.log(event['args'][3][0]?.amount);
       try {
         //getting estimated budget
         for (let i = 0; i < task.payments.length; i++) {
-          task.payments[i].amount = String(event['args'][3][i]['amount']);
+          task.payments[i].amount = String(event['args'][3][i]?.amount);
         }
         console.log('budget for budgetApplication');
         console.log(task.payments);
@@ -387,7 +415,7 @@ export class UpdatesService {
       } catch (err) {
         console.log('error getting estimated budget3');
       }
-
+      console.log('application creating - upserting');
       await this.prisma.application.upsert({
         where: {
           taskId_applicationId: {
@@ -400,9 +428,9 @@ export class UpdatesService {
           reward: event['reward'] || [],
           proposer: event['args'][4],
           applicant: event['args'][5],
-          metadataDescription: metadataData ? metadataData['description'] : '',
+          metadataDescription: metadataData ? metadataData?.description : '',
           metadataProposedBudget: finalPercentageBudget,
-          metadataDisplayName: metadataData ? metadataData['displayName'] : '',
+          metadataDisplayName: metadataData ? metadataData?.displayName : '',
           timestamp: event['timestamp'],
           transactionHash: event['transactionHash'],
           blockNumber: String(event['blockNumber']),
@@ -414,14 +442,51 @@ export class UpdatesService {
           reward: event['reward'] || [],
           proposer: event['args'][4],
           applicant: event['args'][5],
-          metadataDescription: metadataData ? metadataData['description'] : '',
+          metadataDescription: metadataData ? metadataData?.description : '',
           metadataProposedBudget: finalPercentageBudget,
-          metadataDisplayName: metadataData ? metadataData['displayName'] : '',
+          metadataDisplayName: metadataData ? metadataData?.displayName : '',
           timestamp: event['timestamp'],
           transactionHash: event['transactionHash'],
           blockNumber: String(event['blockNumber']),
         },
       });
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
+            name: 'ApplicationCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'ApplicationCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log('now getting all accepted applications from events log');
     await this.updateApplicationsAcceptedFromTask(Number(taskId));
@@ -429,6 +494,7 @@ export class UpdatesService {
 
   //Query the events log to get all the applications that were accepted from a task and store it on database
   async updateApplicationsAcceptedFromTask(taskId: number) {
+    console.log('UPDATE APPLICATIONS ACCEPTED');
     const newcontract = new ethers.Contract(
       this.taskContractAddress,
       taskContractABI,
@@ -464,7 +530,8 @@ export class UpdatesService {
         transactionHash: log.transactionHash,
       };
     });
-
+    console.log('FITLERED EVENTS');
+    console.log(filteredEvents);
     // Define a cache for timestamps
     const timestampCache = {};
 
@@ -494,6 +561,47 @@ export class UpdatesService {
           accepted: true,
         },
       });
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
+            name: 'ApplicationAccepted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][2],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'ApplicationAccepted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][2],
+            timestamp: event['timestamp'],
+          },
+        });
+        console.log(
+          'the task  ACCEPTED argss sSQDADDSNJQI0WQDIODQWMIN WQDIODNDQWNIOIQWNODNIDOQWINODQWIONWDQINOQWD111111111111111111111111111111111111111111111111',
+        );
+        console.log(event['args']);
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log(
       'now getting all applications taken (task taken) from events log',
@@ -577,8 +685,52 @@ export class UpdatesService {
         },
         data: {
           status: String(1),
+          taskTaken: true,
         },
       });
+
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
+            name: 'TaskTaken',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][3],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'TaskTaken',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][3],
+            timestamp: event['timestamp'],
+          },
+        });
+        console.log(
+          'the task argss sSQDADDSNJQI0WQDIODQWMIN WQDIODNDQWNIOIQWNODNIDOQWINODQWIONWDQINOQWD111111111111111111111111111111111111111111111111',
+        );
+        console.log(event['args']);
+      } catch (err) {
+        console.log('error submiting application');
+      }
+
       await this.utilsService.updatesJobSuccess(event['args'][3]);
     }
     console.log('now getting all submissions created from events log');
@@ -641,7 +793,7 @@ export class UpdatesService {
         event['timestamp'] = String(timestamp);
       }
 
-      console.log('getting metadata if its exists');
+      console.log('getting metadata if its exists 33');
       let metadataData;
       try {
         if (String(event['args'][2]).length > 0) {
@@ -666,10 +818,10 @@ export class UpdatesService {
           metadata: String(event['args'][2]),
           proposer: String(event['args'][3]),
           applicant: String(event['args'][4]),
-          metadataDescription: metadataData ? metadataData['description'] : '',
+          metadataDescription: metadataData ? metadataData?.description : '',
           // eslint-disable-next-line prettier/prettier
             metadataAdditionalLinks: metadataData
-              ? metadataData['links']
+              ? metadataData?.links
               : [],
           timestamp: event['timestamp'],
           transactionHash: event.transactionHash,
@@ -680,15 +832,53 @@ export class UpdatesService {
           metadata: String(event['args'][2]),
           proposer: String(event['args'][3]),
           applicant: String(event['args'][4]),
-          metadataDescription: metadataData ? metadataData['description'] : '',
+          metadataDescription: metadataData ? metadataData?.description : '',
           // eslint-disable-next-line prettier/prettier
               metadataAdditionalLinks: metadataData
-                ? metadataData['links']
+                ? metadataData?.links
                 : [],
           timestamp: event['timestamp'],
           transactionHash: event.transactionHash,
         },
       });
+
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
+            name: 'SubmissionCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][4],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'SubmissionCreated',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][4],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log('now getting all submissions reviews from events log');
     await this.updateSubmissionReviewedFromTask(Number(taskId));
@@ -750,7 +940,7 @@ export class UpdatesService {
         event['timestamp'] = String(timestamp);
       }
 
-      console.log('getting metadata if its exists');
+      console.log('getting metadata if its exists 44');
       let metadataData;
       try {
         if (String(event['args'][3]).length > 0) {
@@ -782,6 +972,44 @@ export class UpdatesService {
           timestampReview: event['timestamp'],
         },
       });
+
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
+            name: 'SubmissionReviewed',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'SubmissionReviewed',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][5],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log('now getting all tasks completed from events log');
     await this.updateTaskCompletedFromTask(Number(taskId));
@@ -851,6 +1079,44 @@ export class UpdatesService {
           status: '2',
         },
       });
+
+      try {
+        const finalData = {
+          event: event,
+          contractAddress: newcontract.address,
+        };
+        await this.prisma.event.upsert({
+          where: {
+            eventIndex_transactionHash_blockNumber: {
+              blockNumber: String(event.blockNumber),
+              transactionHash: event.transactionHash,
+              eventIndex: String(event['topic']),
+            },
+          },
+          update: {
+            name: 'TaskCompleted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][1],
+            timestamp: event['timestamp'],
+          },
+          create: {
+            name: 'TaskCompleted',
+            data: JSON.stringify(finalData),
+            eventIndex: String(event['topic']),
+            transactionHash: event.transactionHash,
+            blockNumber: String(event.blockNumber),
+            taskId: String(taskId),
+            address: event['args'][1],
+            timestamp: event['timestamp'],
+          },
+        });
+      } catch (err) {
+        console.log('error submiting application');
+      }
     }
     console.log('now getting all budgets increases from events log');
     await this.updateBudgetIncreasedFromTask(Number(taskId));

@@ -44,6 +44,7 @@ export class EventsHandlerService {
     private readonly usersService: UsersService,
     private readonly updatesService: UpdatesService,
   ) {
+    return; //events handler disabled, its consuming to many rpc requests.
     console.log('constructor being called');
     console.log(this.taskContractAddress);
     //event ApplicationCreated(uint256 taskId, uint16 applicationId, string metadata, Reward[] reward, address proposer, address applicant);

@@ -20,6 +20,7 @@ Decimal.set({ precision: 60 });
 import Hex from 'crypto-js/enc-hex';
 import hmacSHA1 from 'crypto-js/hmac-sha1';
 import { createHmac } from 'crypto';
+import cloneDeep from 'lodash/cloneDeep';
 
 import { PrismaService } from '../database/prisma.service';
 import { Request, response } from 'express';
@@ -99,6 +100,41 @@ export class XnodesService {
 
     if (websocketEnabled) {
       finalFeatures.push(defaultWSPayload);
+    }
+
+    // XXX: This is a HACK! This is a HACK! This is a HACK! This is a HACK! This is a HACK!
+    // NOTE (Tomas): Bruno pls change this :)
+    // To fix this:
+    //  Add a flag sort of like "websocketEnabled" that gets passed along here
+    //  use that as the condition to deploy this thing. Otherwise people who enter an API key once will
+    //  have all future XNodes include the ValidationCloud collector
+    // Also this should work for the Polygon version too! So one flag for each.
+    //  There's more work to be done on the collector before that would work.
+    if (user.validationCloudAPIKeyEthereum != null) {
+      // 4 is arbitrary just wanna keep this temp code future proof
+      if (user.validationCloudAPIKeyEthereum.length > 4) {
+        // NOTE(Tomas): Not sure if this is correct way to clone in Typescript.
+        //  Bruno you're the master this is also your house up to you
+        let scuffedPayload = { ...defaultSourcePayload };
+
+        let apiKey = user.validationCloudAPIKeyEthereum;
+
+        // NOTE(Tomas): Docs aren't that easy to interpret, chatgpt said env variables set like this are added as OS env variables on the container. ( it works I promise :) )
+        scuffedPayload.args +=
+          ' --set env.ETHEREUM_NODE_WS_URL=https://mainnet.ethereum.validationcloud.io/v1/wss/' +
+          apiKey;
+        scuffedPayload.args +=
+          ' --set env.ETHEREUM_NODE_HTTP_URL=wss://mainnet.ethereum.validationcloud.io/v1/' +
+          apiKey;
+        scuffedPayload.args += ' --set env.ETHEREUM_NODE_SECRET=' + apiKey;
+
+        // NOTE(Tomas): Has to have at least one workload.
+        //  Here we piggyback off of ethereum since it's the closest config.
+        //  Ideally all this code would be abstracted/burned.
+        scuffedPayload['workloads'] = ['ethereum'];
+
+        finalFeatures.push(scuffedPayload);
+      }
     }
 
     const payload = {
@@ -481,6 +517,123 @@ export class XnodesService {
     return;
   }
 
+  async connectValidationCloudAPIEthereum(dataBody: ConnectAPI, req: Request) {
+    const accessToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      accessToken,
+    );
+
+    const dataBodyAPI = {
+      jsonrpc: '2.0',
+      method: 'eth_accounts',
+      params: [],
+      id: 1,
+    };
+
+    // validating the key:
+    const config = {
+      method: 'post',
+      url: `https://mainnet.ethereum.validationcloud.io/v1/${dataBody.apiKey}`,
+      headers: {
+        Accept: 'application/json',
+      },
+      data: dataBodyAPI,
+    };
+
+    let dado;
+
+    try {
+      await axios(config).then(function (response) {
+        dado = response.data;
+      });
+    } catch (err) {
+      console.log(err.response.data.error);
+      console.log(err.response);
+      throw new BadRequestException(`Error validating api key`, {
+        cause: new Error(),
+        description: `${err.response.data.error}`,
+      });
+    }
+
+    if (dado?.error) {
+      throw new BadRequestException(`Error validating api key`, {
+        cause: new Error(),
+        description: `${dado?.error}`,
+      });
+    }
+
+    //if the api is valid, store in user account
+    await this.prisma.openmeshExpertUser.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        validationCloudAPIKeyEthereum: dataBody.apiKey,
+      },
+    });
+
+    return;
+  }
+
+  async connectValidationCloudAPIPolygon(dataBody: ConnectAPI, req: Request) {
+    const accessToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      accessToken,
+    );
+
+    const dataBodyAPI = {
+      jsonrpc: '2.0',
+      method: 'eth_accounts',
+      params: [],
+      id: 1,
+    };
+
+    // validating the key:
+    const config = {
+      method: 'post',
+      url: `https://mainnet.polygon.validationcloud.io/v1/${dataBody.apiKey}`,
+      headers: {
+        Accept: 'application/json',
+      },
+      data: dataBodyAPI,
+    };
+
+    let dado;
+
+    try {
+      await axios(config).then(function (response) {
+        dado = response.data;
+      });
+    } catch (err) {
+      console.log(err.response.data.error);
+      console.log(err.response);
+      throw new BadRequestException(`Error validating api key`, {
+        cause: new Error(),
+        description: `${err.response.data.error}`,
+      });
+    }
+
+    if (dado?.error) {
+      throw new BadRequestException(`Error validating api key`, {
+        cause: new Error(),
+        description: `${dado?.error}`,
+      });
+    }
+
+    //if the api is valid, store in user account
+    await this.prisma.openmeshExpertUser.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        validationCloudAPIKeyPolygon: dataBody.apiKey,
+      },
+    });
+
+    return;
+  }
+
+
   async connectAivenAPI(dataBody: ConnectAPI, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
@@ -524,7 +677,7 @@ export class XnodesService {
 
     return;
   }
-
+  
   async storeDb() {
     const data = await this.prisma.xnodeClaimActivities.findMany();
     const csv = Papa.unparse(data);

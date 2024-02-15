@@ -180,7 +180,56 @@ export class TasksService {
       });
       await this.applicationsFromTask(task['id']);
     }
+
+    await this.updateOffChainBudgetTasks();
     return tasksWithMetadata;
+  }
+
+  //This is a temporary function, since some tasks are not funded yet but we wnat to show how much the user will earn if he gets it, we will manually update this tasks
+  async updateOffChainBudgetTasks() {
+    if (process.env.CHAIN_ENV === 'ETHEREUM') {
+      return;
+    }
+    const taskIdToBudget = {
+      '1': '55000',
+      '2': '30000',
+      '3': '30000',
+      '4': '20000',
+      '5': '25000',
+      '6': '30000',
+      '7': '45000',
+      '8': '95000',
+      '9': '50000',
+      '10': '65000',
+      '11': '50000',
+      '12': '35000',
+      '13': '90000',
+      '14': '85000',
+      '15': '70000',
+      '16': '60000',
+      '17': '40000',
+      '18': '30000',
+      '19': '30000',
+      '20': '6000',
+      '21': '6000',
+      '22': '20000',
+      '23': '30000',
+      '24': '500',
+      '25': '1500',
+      '26': '45000',
+      '27': '15000',
+      '28': '100000',
+    };
+    for (const [taskId, budget] of Object.entries(taskIdToBudget)) {
+      await this.prisma.task.update({
+        where: {
+          taskId,
+        },
+        data: {
+          estimatedBudget: budget,
+        },
+      });
+    }
   }
 
   async uploadIPFSMetadataTaskCreation(
@@ -538,6 +587,7 @@ export class TasksService {
         deadline: true,
         departament: true,
         skills: true,
+        taskTaken: true,
         estimatedBudget: true,
         projectLength: true,
         contributorsNeeded: true,
@@ -1289,7 +1339,7 @@ export class TasksService {
           );
         }
 
-        console.log('getting metadata if its exists');
+        console.log('getting metadata if its exists 11');
         let metadataData;
         try {
           if (String(event['args'][2]).length > 0) {
@@ -1307,11 +1357,11 @@ export class TasksService {
           reward: event['reward'] || [],
           proposer: event['args'][4],
           applicant: event['args'][5],
-          metadataDescription: metadataData['description'] || '',
+          metadataDescription: metadataData?.description || '',
           metadataProposedBudget:
-            String(metadataData['budgetPercentageRequested']) || '',
-          metadataAdditionalLink: metadataData['additionalLink'] || '',
-          metadataDisplayName: metadataData['displayName'] || '',
+            String(metadataData?.budgetPercentageRequested) || '',
+          metadataAdditionalLink: metadataData?.additionalLink || '',
+          metadataDisplayName: metadataData?.displayName || '',
           timestamp: event['timestamp'],
           transactionHash: event['transactionHash'],
           blockNumber: String(event['blockNumber']),
@@ -1648,15 +1698,15 @@ export class TasksService {
         },
       );
     }
-
+    console.log('trying now application 1290');
     const application = await this.prisma.applicationOffChain.create({
       data: {
         openmeshExpertUserId: user.id,
-        taskId: data.taskId,
-        metadataDisplayName: data.displayName,
-        metadataDescription: data.description,
-        metadataAdditionalLink: JSON.stringify(data.links),
-        metadataProposedBudget: JSON.stringify(data.budgetPercentageRequested),
+        taskId: data?.taskId,
+        metadataDisplayName: data?.displayName,
+        metadataDescription: data?.description,
+        metadataAdditionalLink: JSON.stringify(data?.links),
+        metadataProposedBudget: JSON.stringify(data?.budgetPercentageRequested),
         timestamp: String(Date.now() / 1000),
       },
     });

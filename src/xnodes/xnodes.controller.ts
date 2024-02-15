@@ -109,7 +109,6 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.connectEquinixAPI(data, req);
   }
-
   @ApiOperation({
     summary: 'Connects and store the user aiven api key - https://api.aiven.io/v1/project',
   })
@@ -122,6 +121,41 @@ export class XnodesController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.connectAivenAPI(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Connects and store the user valcloud api key - polygon',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('connectValidationCloudAPIPolygon')
+  connectValidationCloudAPIPolygon(
+    @Body() data: ConnectAPI,
+    @Req() req: Request,
+  ) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.xnodesService.connectValidationCloudAPIPolygon(data, req);
+  }
+
+  // testing ci cd railway
+  @ApiOperation({
+    summary: 'Connects and store the user valcloud api key - eth',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('connectValidationCloudAPIEthereum')
+  connectValidationCloudAPIEthereum(
+    @Body() data: ConnectAPI,
+    @Req() req: Request,
+  ) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.xnodesService.connectValidationCloudAPIEthereum(data, req);
   }
 
   @ApiOperation({
