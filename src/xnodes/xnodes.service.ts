@@ -667,7 +667,7 @@ export class XnodesService {
 
     //validate if user is admin
     const keys = Object.keys(data?.project_membership)
-    if(data[keys[0]] !== 'admin') {
+    if(data?.project_membership[keys[0]] !== 'admin') {
       throw new BadRequestException(`project_membership is not an admin`, {
         cause: new Error(),
         description: `project_membership is not an admin`,
@@ -706,7 +706,7 @@ export class XnodesService {
       // validating the equinix key:
       const config = {
         method: 'get',
-        url: `https://api.aiven.io/v1/${projectName}/brunolsantos152-fcd7/service`,
+        url: `https://api.aiven.io/v1/project/${projectName}/service`,
         headers: {
           Accept: 'application/json',
           'Authorization': `aivenv1 ${apiKey}`,
