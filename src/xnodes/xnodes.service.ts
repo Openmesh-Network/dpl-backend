@@ -633,7 +633,6 @@ export class XnodesService {
     return;
   }
 
-
   async connectAivenAPI(dataBody: ConnectAPI, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
@@ -646,7 +645,7 @@ export class XnodesService {
       url: 'https://api.aiven.io/v1/project',
       headers: {
         Accept: 'application/json',
-        'Authorization': `aivenv1 ${dataBody.apiKey}`,
+        Authorization: `aivenv1 ${dataBody.apiKey}`,
       },
     };
 
@@ -666,8 +665,8 @@ export class XnodesService {
     }
 
     //validate if user is admin
-    const keys = Object.keys(data?.project_membership)
-    if(data?.project_membership[keys[0]] !== 'admin') {
+    const keys = Object.keys(data?.project_membership);
+    if (data?.project_membership[keys[0]] !== 'admin') {
       throw new BadRequestException(`project_membership is not an admin`, {
         cause: new Error(),
         description: `project_membership is not an admin`,
@@ -675,14 +674,20 @@ export class XnodesService {
     }
 
     //validate if it has server deployed with grafana:
-    if(data.projects?.length === 0) {
-      throw new BadRequestException(`User should have at least one project created`, {
-        cause: new Error(),
-        description: `User should have at least one project created`,
-      });
+    if (data.projects?.length === 0) {
+      throw new BadRequestException(
+        `User should have at least one project created`,
+        {
+          cause: new Error(),
+          description: `User should have at least one project created`,
+        },
+      );
     }
 
-    const getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(data, dataBody.apiKey);
+    const getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(
+      data,
+      dataBody.apiKey,
+    );
 
     //if the api is valid, store in user account
     const upd = await this.prisma.openmeshExpertUser.update({
@@ -691,7 +696,7 @@ export class XnodesService {
       },
       data: {
         aivenAPIKey: dataBody.apiKey,
-        aivenAPIServiceUriParams: JSON.stringify(getGrafanaURIParams)
+        aivenAPIServiceUriParams: JSON.stringify(getGrafanaURIParams),
       },
     });
 
@@ -699,9 +704,8 @@ export class XnodesService {
   }
 
   async getGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
-
     for (let i = 0; i < data?.projects.length; i++) {
-      const projectName = data?.projects[i].project_name
+      const projectName = data?.projects[i].project_name;
 
       // validating the equinix key:
       const config = {
@@ -709,7 +713,7 @@ export class XnodesService {
         url: `https://api.aiven.io/v1/project/${projectName}/service`,
         headers: {
           Accept: 'application/json',
-          'Authorization': `aivenv1 ${apiKey}`,
+          Authorization: `aivenv1 ${apiKey}`,
         },
       };
 
@@ -731,16 +735,19 @@ export class XnodesService {
       if (dataRes?.services?.length > 0) {
         for (let j = 0; j < dataRes?.services.length; j++) {
           if (dataRes?.services[j].service_type === 'grafana') {
-            return dataRes?.services[j].service_uri_params
+            return dataRes?.services[j].service_uri_params;
           }
         }
       }
     }
-    
-      throw new BadRequestException(`Grafana service was not found in projects, make sure to create one.`, {
+
+    throw new BadRequestException(
+      `Grafana service was not found in projects, make sure to create one.`,
+      {
         cause: new Error(),
         description: `Grafana service was not found in projects, make sure to create one.`,
-      });
+      },
+    );
   }
 
   async storeDb() {
