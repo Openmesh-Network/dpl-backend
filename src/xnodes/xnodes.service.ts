@@ -650,11 +650,11 @@ export class XnodesService {
       },
     };
 
-    let dado;
+    let data;
 
     try {
       await axios(config).then(function (response) {
-        dado = response.data;
+        data = response.data;
       });
     } catch (err) {
       console.log(err.response.data.error);
@@ -665,19 +665,84 @@ export class XnodesService {
       });
     }
 
+    //validate if user is admin
+    const keys = Object.keys(data?.project_membership)
+    if(data[keys[0]] !== 'admin') {
+      throw new BadRequestException(`project_membership is not an admin`, {
+        cause: new Error(),
+        description: `project_membership is not an admin`,
+      });
+    }
+
+    //validate if it has server deployed with grafana:
+    if(data.projects?.length === 0) {
+      throw new BadRequestException(`User should have at least one project created`, {
+        cause: new Error(),
+        description: `User should have at least one project created`,
+      });
+    }
+
+    const getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(data, dataBody.apiKey);
+
     //if the api is valid, store in user account
-    await this.prisma.openmeshExpertUser.update({
+    const upd = await this.prisma.openmeshExpertUser.update({
       where: {
         id: user.id,
       },
       data: {
-        equinixAPIKey: dataBody.apiKey,
+        aivenAPIKey: dataBody.apiKey,
+        aivenAPIServiceUriParams: JSON.stringify(getGrafanaURIParams)
       },
     });
 
-    return;
+    return upd;
   }
-  
+
+  async getGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
+
+    for (let i = 0; i < data?.projects.length; i++) {
+      const projectName = data?.projects[i].project_name
+
+      // validating the equinix key:
+      const config = {
+        method: 'get',
+        url: `https://api.aiven.io/v1/${projectName}/brunolsantos152-fcd7/service`,
+        headers: {
+          Accept: 'application/json',
+          'Authorization': `aivenv1 ${apiKey}`,
+        },
+      };
+
+      let dataRes;
+
+      try {
+        await axios(config).then(function (response) {
+          dataRes = response.data;
+        });
+      } catch (err) {
+        console.log(err.response.data.error);
+        console.log(err.response);
+        throw new BadRequestException(`Error getting services`, {
+          cause: new Error(),
+          description: `${err.response.data.error}`,
+        });
+      }
+
+      if (dataRes?.services?.length > 0) {
+        for (let j = 0; j < dataRes?.services.length; j++) {
+          if (dataRes?.services[j].service_type === 'grafana') {
+            return dataRes?.services[j].service_uri_params
+          }
+        }
+      }
+    }
+    
+      throw new BadRequestException(`Grafana service was not found in projects, make sure to create one.`, {
+        cause: new Error(),
+        description: `Grafana service was not found in projects, make sure to create one.`,
+      });
+  }
+
   async storeDb() {
     const data = await this.prisma.xnodeClaimActivities.findMany();
     const csv = Papa.unparse(data);

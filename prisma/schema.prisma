@@ -433,6 +433,7 @@ model OpenmeshExpertUser {
 
   equinixAPIKey String?
   aivenAPIKey String?
+  aivenAPIServiceUriParams String?
   validationCloudAPIKeyEthereum String?
   validationCloudAPIKeyPolygon String?
 
