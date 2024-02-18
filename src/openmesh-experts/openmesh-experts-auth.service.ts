@@ -543,6 +543,7 @@ export class OpenmeshExpertsAuthService {
       email: user.email,
       equinixAPIKey: user.equinixAPIKey,
       aivenAPIKey: user.aivenAPIKey,
+      aivenAPIServiceUriParams: user.aivenAPIServiceUriParams,
       validationCloudAPIKeyEthereum: user.validationCloudAPIKeyEthereum,
       validationCloudAPIKeyPolygon: user.validationCloudAPIKeyPolygon,
       firstName: user.firstName,
