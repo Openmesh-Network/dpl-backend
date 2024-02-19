@@ -684,10 +684,18 @@ export class XnodesService {
       );
     }
 
-    const getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(
+    let getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(
       data,
       dataBody.apiKey,
     );
+
+    //if it does not have a grafana service data, just deploy a new one
+    if (!getGrafanaURIParams) {
+      getGrafanaURIParams = await this.deployGrafanaServiceFromAivenAPI(
+        data,
+        dataBody.apiKey,
+      );
+    }
 
     //if the api is valid, store in user account
     const upd = await this.prisma.openmeshExpertUser.update({
@@ -704,6 +712,15 @@ export class XnodesService {
   }
 
   async getGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
+    if (data?.projects.length === 0) {
+      throw new BadRequestException(
+        `A project was not found, make sure to create one.`,
+        {
+          cause: new Error(),
+          description: `A project was not found, make sure to create one.`,
+        },
+      );
+    }
     for (let i = 0; i < data?.projects.length; i++) {
       const projectName = data?.projects[i].project_name;
 
@@ -740,14 +757,53 @@ export class XnodesService {
         }
       }
     }
+  }
+  async deployGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
+    const databody = {
+      cloud: 'do-syd',
+      group_name: 'default',
+      plan: 'startup-1',
+      service_name: 'openmesh-grafana-123',
+      service_type: 'grafana',
+      project_vpc_id: null,
+      user_config: {},
+      tags: {},
+    };
+    for (let i = 0; i < data?.projects.length; i++) {
+      const projectName = data?.projects[i].project_name;
 
-    throw new BadRequestException(
-      `Grafana service was not found in projects, make sure to create one.`,
-      {
-        cause: new Error(),
-        description: `Grafana service was not found in projects, make sure to create one.`,
-      },
-    );
+      // validating the equinix key:
+      const config = {
+        method: 'post',
+        url: `https://api.aiven.io/v1/project/${projectName}/service`,
+        headers: {
+          Accept: 'application/json',
+          Authorization: `aivenv1 ${apiKey}`,
+        },
+        data: databody,
+      };
+
+      let dataRes;
+
+      try {
+        await axios(config).then(function (response) {
+          dataRes = response.data;
+        });
+      } catch (err) {
+        console.log(err.response.data.error);
+        console.log(err.response);
+      }
+
+      if (dataRes?.service) {
+        return dataRes.service.service_uri_params;
+      }
+    }
+
+    // if no project works, just trhows error
+    throw new BadRequestException('Grafana service deploy failed', {
+      cause: new Error(),
+      description: 'Grafana service deploy failed',
+    });
   }
 
   async storeDb() {
