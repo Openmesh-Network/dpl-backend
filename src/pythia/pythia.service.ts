@@ -160,6 +160,9 @@ export class PythiaService {
       where: {
         openmeshExpertUserId: user.id,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
     return pythiaChats;
