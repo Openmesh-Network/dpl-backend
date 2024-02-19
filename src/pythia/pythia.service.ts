@@ -211,9 +211,9 @@ export class PythiaService {
     });
 
     if (!pythiaChat) {
-      throw new BadRequestException('Chat not found', {
+      throw new BadRequestException('Chat not found here', {
         cause: new Error(),
-        description: 'Chat not found',
+        description: 'Chat not found here',
       });
     }
 
