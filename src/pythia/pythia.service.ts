@@ -29,6 +29,7 @@ import { OpenmeshExpertsAuthService } from 'src/openmesh-experts/openmesh-expert
 
 import { features } from 'process';
 import {
+  ChangeChatNameDTO,
   CreatePythiaChatDto,
   GetPythiaChatDto,
   InputMessageDTO,
@@ -112,6 +113,39 @@ export class PythiaService {
         pythiaChatId: dataBody.id,
         userMessage: dataBody.userInput,
         response: 'Pythia response here blablabla',
+      },
+    });
+  }
+
+  async changeChatName(dataBody: ChangeChatNameDTO, req: Request) {
+    const accessToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      accessToken,
+    );
+
+    const pythiaChat = await this.prisma.pythiaChat.findFirst({
+      where: {
+        id: dataBody.id,
+        openmeshExpertUserId: user.id,
+      },
+      include: {
+        PythiaInputs: true,
+      },
+    });
+
+    if (!pythiaChat) {
+      throw new BadRequestException('Chat not found', {
+        cause: new Error(),
+        description: 'Chat not found',
+      });
+    }
+
+    return await this.prisma.pythiaChat.update({
+      where: {
+        id: dataBody.id,
+      },
+      data: {
+        name: dataBody.chatName,
       },
     });
   }

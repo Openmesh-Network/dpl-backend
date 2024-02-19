@@ -25,6 +25,7 @@ import { Request } from 'express';
 
 import { PythiaService } from './pythia.service';
 import {
+  ChangeChatNameDTO,
   CreatePythiaChatDto,
   GetPythiaChatDto,
   InputMessageDTO,
@@ -78,6 +79,20 @@ export class PythiaController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.pythiaService.inputUserChatMessage(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Change the chat name',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Put('changeChatName')
+  changeChatName(@Body() data: ChangeChatNameDTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.pythiaService.changeChatName(data, req);
   }
 
   @ApiOperation({

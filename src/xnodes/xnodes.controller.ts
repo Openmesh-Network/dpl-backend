@@ -110,7 +110,8 @@ export class XnodesController {
     return this.xnodesService.connectEquinixAPI(data, req);
   }
   @ApiOperation({
-    summary: 'Connects and store the user aiven api key - https://api.aiven.io/v1/project',
+    summary:
+      'Connects and store the user aiven api key - https://api.aiven.io/v1/project',
   })
   @ApiHeader({
     name: 'X-Parse-Application-Id',

@@ -32,6 +32,25 @@ export class CreatePythiaChatDto {
   userInput: string;
 }
 
+export class ChangeChatNameDTO {
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    description: 'The pythia id',
+  })
+  id: string;
+
+  @IsNotEmpty()
+  @MaxLength(10000)
+  @IsNotBlank()
+  @IsString()
+  @ApiProperty({
+    description: 'The chat name',
+    maxLength: 10000,
+  })
+  chatName: string;
+}
+
 export class InputMessageDTO {
   @IsNotEmpty()
   @MaxLength(1000)
