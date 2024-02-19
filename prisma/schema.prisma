@@ -640,7 +640,7 @@ model PythiaInput {
   response      String? @db.Text  // the answer that the llm model will give to the user
 
   pythiaChatId String   
-  pythiaChat   PythiaChat  @relation(fields: [pythiaChatId], references: [id])
+  pythiaChat   PythiaChat  @relation(fields: [pythiaChatId], references: [id], onDelete: Cascade)
 
   createdAt     DateTime  @default(now())
   updatedAt DateTime? @updatedAt
