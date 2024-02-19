@@ -214,9 +214,10 @@ export class PythiaService {
       });
     }
 
-    return await this.prisma.pythiaChat.delete({
+    await this.prisma.pythiaChat.deleteMany({
       where: {
         id: dataBody.id,
+        openmeshExpertUserId: user.id,
       },
     });
   }
