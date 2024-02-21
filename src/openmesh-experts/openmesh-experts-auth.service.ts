@@ -360,7 +360,7 @@ export class OpenmeshExpertsAuthService {
       });
     } else {
       const nonceNew = String(Number(user.updatesNonce) + 1);
-      await this.prisma.user.update({
+      await this.prisma.openmeshExpertUser.update({
         where: {
           id: user.id,
         },
