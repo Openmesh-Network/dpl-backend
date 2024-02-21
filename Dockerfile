@@ -28,7 +28,7 @@ RUN apt-get update && \
     apt-get install -y nodejs
 
 # Instalar o dfx
-RUN curl -fsSL https://internetcomputer.org/install.sh | sh
+# RUN curl -fsSL https://internetcomputer.org/install.sh | sh
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
