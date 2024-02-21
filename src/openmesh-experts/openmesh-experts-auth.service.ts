@@ -40,6 +40,7 @@ import {
   CreateOpenmeshExpertVerifiedContributorUserDTO,
   EmailRecoverPasswordDTO,
   LoginDTO,
+  LoginWeb3DTO,
   RecoverPasswordDTO,
   RecoverPasswordIsValidDTO,
   UpdateOpenmeshExpertUserDTO,
@@ -293,6 +294,79 @@ export class OpenmeshExpertsAuthService {
     const userFinalReturn = {
       id: user.id,
       email: user.email,
+      web3Address: user.web3Address,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      companyName: user.companyName,
+      location: user.location,
+      description: user.description,
+      foundingYear: user.foundingYear,
+      website: user.website,
+      tags: user.tags,
+      calendly: user.scheduleCalendlyLink,
+      profilePictureHash: user.profilePictureHash,
+      confirmedEmail: user.confirmedEmail,
+      sessionToken: jwt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    await this.prisma.session.create({
+      data: {
+        sessionToken: jwt,
+      },
+    });
+
+    return userFinalReturn;
+  }
+
+  async loginByWeb3Address(data: LoginWeb3DTO) {
+    let user = await this.prisma.openmeshExpertUser.findFirst({
+      where: {
+        web3Address: data.address,
+      },
+    });
+    const dataToBeHashed = `${data.address}-${user?.updatesNonce || '0'}`;
+    const hash = await this.utilsService.hashObject(dataToBeHashed);
+    const finalHash = `0x${hash}`;
+    const isVerified = await this.utilsService.verifiesSignedMessage(
+      finalHash,
+      data.address,
+      data.signature,
+    );
+    if (!isVerified) {
+      throw new BadRequestException('Invalid signature', {
+        cause: new Error(),
+        description: 'Invalid signature',
+      });
+    }
+    if (!user) {
+      // If not user, create it
+      user = await this.prisma.openmeshExpertUser.create({
+        data: {
+          web3Address: data.address,
+        },
+      });
+    } else {
+      const nonceNew = String(Number(user.updatesNonce) + 1);
+      await this.prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          updatesNonce: nonceNew,
+        },
+      });
+    }
+
+    const jwt = await this.jwtService.signAsync({
+      id: user.id,
+    });
+
+    const userFinalReturn = {
+      id: user.id,
+      email: user.email,
+      web3Address: user.web3Address,
       firstName: user.firstName,
       lastName: user.lastName,
       companyName: user.companyName,

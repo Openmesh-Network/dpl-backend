@@ -33,6 +33,7 @@ import {
   EmailRecoverPasswordDTO,
   LoginDTO,
   LoginResponseDTO,
+  LoginWeb3DTO,
   RecoverPasswordDTO,
   RecoverPasswordIsValidDTO,
   UpdateOpenmeshExpertUserDTO,
@@ -99,6 +100,21 @@ export class OpenmeshExpertsController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshExpertsAuthService.login(data);
+  }
+
+  @ApiOperation({
+    summary: 'Login by web3 flow an openmesh user',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @ApiResponse({ status: 200, type: LoginResponseDTO })
+  @Post('loginByWeb3Address')
+  loginByWeb3Address(@Body() data: LoginWeb3DTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.openmeshExpertsAuthService.loginByWeb3Address(data);
   }
 
   @ApiOperation({
