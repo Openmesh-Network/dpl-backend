@@ -39,6 +39,7 @@ import {
   CreateOpenmeshExpertUserDTO,
   CreateOpenmeshExpertVerifiedContributorUserDTO,
   EmailRecoverPasswordDTO,
+  GetUserNonceDTO,
   LoginDTO,
   LoginWeb3DTO,
   RecoverPasswordDTO,
@@ -318,6 +319,16 @@ export class OpenmeshExpertsAuthService {
     });
 
     return userFinalReturn;
+  }
+
+  async getUserNonce(data: GetUserNonceDTO) {
+    const user = await this.prisma.openmeshExpertUser.findFirst({
+      where: {
+        web3Address: data.address,
+      },
+    });
+
+    return user?.updatesNonce;
   }
 
   async loginByWeb3Address(data: LoginWeb3DTO) {

@@ -31,6 +31,7 @@ import {
   CreateOpenmeshExpertUserDTO,
   CreateOpenmeshExpertVerifiedContributorUserDTO,
   EmailRecoverPasswordDTO,
+  GetUserNonceDTO,
   LoginDTO,
   LoginResponseDTO,
   LoginWeb3DTO,
@@ -115,6 +116,21 @@ export class OpenmeshExpertsController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshExpertsAuthService.loginByWeb3Address(data);
+  }
+
+  @ApiOperation({
+    summary: '',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @ApiResponse({ status: 200, type: LoginResponseDTO })
+  @Post('getUserNonce')
+  getUserNonce(@Body() data: GetUserNonceDTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.openmeshExpertsAuthService.getUserNonce(data);
   }
 
   @ApiOperation({

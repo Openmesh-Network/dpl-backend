@@ -61,15 +61,16 @@ export class LoginWeb3DTO {
   })
   @IsNotEmpty()
   signature: string;
+}
 
+export class GetUserNonceDTO {
   @IsString()
   @ApiProperty({
-    description: 'Used to verifies the signature validate',
-    example: '0',
-    default: '0',
+    description: 'The user address',
+    example: '0x08ADb3400E48cACb7d5a5CB386877B3A159d525C',
   })
   @IsNotEmpty()
-  nonce: string;
+  address: string;
 }
 
 export class CreateOpenmeshExpertUserDTO {
