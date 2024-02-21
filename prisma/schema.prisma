@@ -428,8 +428,13 @@ model SpeakersRegistrationCalendly {
 model OpenmeshExpertUser {
 
   id       String @id @default(uuid())
-  email    String @unique //unique
-  password String
+
+  // AS THE USER CAN LOGIN EITHER WITH EMAIL + PASSWORD or WITH WEB3 LOGIN (SINGING A MESSAGE WITH ITS WALLET) - BOTH EMAIL AND PASSWORD CAN BE OPTIONAL (AS THE WEB3 ADDRESS)
+  email    String? @unique //unique
+  password String?
+  web3Address String? @unique
+
+  updatesNonce String @default("1") //Nonce that managens everytime a profile signin is done, to control the message signing.
 
   equinixAPIKey String?
   aivenAPIKey String?
