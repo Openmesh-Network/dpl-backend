@@ -4,7 +4,10 @@
   "compilerOptions": {
     "assets": [
       "**/*.hbs",
-      "auth/*.json"
+      "auth/*.json",
+      "**/*.py",
+      "**/**/*.py",
+      "**/**/**/*.py"
     ],
     "watchAssets": true,
     "deleteOutDir": true
