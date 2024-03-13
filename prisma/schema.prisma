@@ -652,3 +652,17 @@ model PythiaInput {
 
   @@map("pythiaInput")
 }
+
+model LLMInstance { 
+  id String @id @default(uuid())
+
+  name          String?
+
+  urlEndpoint   String? //aws sagemaker endpoint to call the model
+  modelId      String? //aws sagemaker model id
+
+  createdAt     DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("llmInstance")
+}

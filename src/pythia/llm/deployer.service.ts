@@ -26,7 +26,7 @@ import * as AWS from 'aws-sdk';
 
 // This is the service related with the LLM deploying, it runs in the cli the python script that will deploy the model to aws sagemaker and get back the url endpoint
 @Injectable()
-export class LLMService {
+export class DeployerService {
   constructor(private readonly prisma: PrismaService) {
     AWS.config.update({
       region: 'us-east-1',
@@ -78,7 +78,6 @@ export class LLMService {
     // Get index after "'endpoint_name': "
     const inicioNome = inicio + "'endpoint_name': ".length;
 
-    //
     const fim = str.indexOf(',', inicioNome);
     if (fim === -1) return str.substring(inicioNome).trim(); // If it doesnt find any comma, return everything
 
