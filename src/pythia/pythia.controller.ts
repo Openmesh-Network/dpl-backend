@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UseGuards,
   Put,
+  Delete,
 } from '@nestjs/common';
 
 import {
@@ -26,16 +27,23 @@ import { Request } from 'express';
 import { PythiaService } from './pythia.service';
 import {
   ChangeChatNameDTO,
+  CreateLLMDTO,
   CreatePythiaChatDto,
+  GetDTO,
   GetPythiaChatDto,
   InputMessageDTO,
 } from './dto/pythia.dto';
+import { DeployerService } from './llm/deployer.service';
+import { LLMInstanceService } from './llm/llm.service';
 
 @ApiTags('Pythia - Managing pythia')
 @Controller('pythia/functions')
 export class PythiaController {
-  constructor(private readonly pythiaService: PythiaService) {}
-  // new
+  constructor(
+    private readonly pythiaService: PythiaService,
+    private readonly llmInstanceService: LLMInstanceService,
+    private readonly deployerService: DeployerService,
+  ) {}
   apiTokenKey = process.env.API_TOKEN_KEY;
   deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 
@@ -121,5 +129,74 @@ export class PythiaController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.pythiaService.deleteUserChat(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'ADMIN - deploy a new llm instance at sagemaker',
+  })
+  @ApiHeader({
+    name: 'x-deeeplink-team-signature',
+    description: 'Endpoint only available for openmesh team',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('createLLM')
+  createLLM(@Body() data: CreateLLMDTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    if (
+      String(req.headers['x-deeeplink-team-signature']) !==
+      this.deeplinkSignature
+    )
+      throw new UnauthorizedException();
+    return this.llmInstanceService.createLLM(data);
+  }
+
+  @ApiOperation({
+    summary: 'ADMIN - delete the llm instance at sagemaker',
+  })
+  @ApiHeader({
+    name: 'x-deeeplink-team-signature',
+    description: 'Endpoint only available for openmesh team',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Delete('deleteLLMInstance')
+  deleteLLMInstance(@Body() data: GetDTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    if (
+      String(req.headers['x-deeeplink-team-signature']) !==
+      this.deeplinkSignature
+    )
+      throw new UnauthorizedException();
+    return this.llmInstanceService.deleteLLMInstance(data);
+  }
+
+  @ApiOperation({
+    summary: 'ADMIN - return the llm instances',
+  })
+  @ApiHeader({
+    name: 'x-deeeplink-team-signature',
+    description: 'Endpoint only available for openmesh team',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Get('getLLMInstances')
+  getLLMInstances(@Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    if (
+      String(req.headers['x-deeeplink-team-signature']) !==
+      this.deeplinkSignature
+    )
+      throw new UnauthorizedException();
+    return this.llmInstanceService.getLLMInstances();
   }
 }

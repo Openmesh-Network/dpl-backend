@@ -16,7 +16,7 @@ import { DeployerService } from './deployer.service';
 import { CreateLLMDTO, GetDTO } from '../dto/pythia.dto';
 
 @Injectable()
-export class LLMAppService {
+export class LLMInstanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly deployerService: DeployerService,
@@ -42,6 +42,11 @@ export class LLMAppService {
     return await this.prisma.lLMInstance.findMany({
       orderBy: {
         createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
       },
     });
   }

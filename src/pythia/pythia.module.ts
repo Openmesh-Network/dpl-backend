@@ -8,6 +8,8 @@ import { UsersModule } from 'src/users/users.module';
 import { OpenmeshExpertsModule } from 'src/openmesh-experts/openmesh-experts.module';
 import { PythiaService } from './pythia.service';
 import { PythiaController } from './pythia.controller';
+import { LLMInstanceService } from './llm/llm.service';
+import { DeployerService } from './llm/deployer.service';
 
 @Module({
   imports: [
@@ -28,7 +30,12 @@ import { PythiaController } from './pythia.controller';
     }),
   ],
   controllers: [PythiaController],
-  providers: [PythiaService, PrismaService],
-  exports: [PythiaService],
+  providers: [
+    PythiaService,
+    LLMInstanceService,
+    DeployerService,
+    PrismaService,
+  ],
+  exports: [PythiaService, LLMInstanceService, DeployerService],
 })
 export class PythiaModule {}
