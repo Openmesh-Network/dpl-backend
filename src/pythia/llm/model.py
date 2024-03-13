@@ -70,7 +70,7 @@ print('going to predictor')
 # deploy model to SageMaker
 predictor = huggingface_model.deploy(
 	initial_instance_count=1, # number of instances
-	instance_type='ml.g5.2xlarge', #'ml.m5.xlarge'
+	instance_type='ml.g5.2xlarge',
  	container_startup_health_check_timeout=300
 )
 
