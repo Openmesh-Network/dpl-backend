@@ -56,7 +56,7 @@ print(f"image uri: {llm_image}")
 from sagemaker.huggingface import HuggingFaceModel
 
 # Falcon 7b
-hub = {'HF_MODEL_ID':'tiiuae/falcon-7b'}
+hub = {'HF_MODEL_ID':'casperhansen/mixtral-instruct-awq'}
 print('hugging face')
 
 # Hugging Face Model Class
