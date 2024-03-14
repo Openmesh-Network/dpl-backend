@@ -200,9 +200,6 @@ export class PythiaService {
       accessToken,
     );
 
-    console.log('o id que recebi');
-    console.log(dataBody.id);
-
     const pythiaChat = await this.prisma.pythiaChat.findFirst({
       where: {
         id: dataBody.id,
