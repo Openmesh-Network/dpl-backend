@@ -9,6 +9,12 @@ import { MessagesPlaceholder } from '@langchain/core/prompts';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
+import { CheerioWebBaseLoader } from 'langchain/document_loaders/web/cheerio';
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { MemoryVectorStore } from 'langchain/vectorstores/memory';
+import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
+import { createRetrievalChain } from 'langchain/chains/retrieval';
 
 @Injectable()
 export class ChatbotService {
@@ -21,16 +27,43 @@ export class ChatbotService {
     openAIApiKey: '',
   });
   outputParser = new StringOutputParser();
+  loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
 
   async inputQuestion() {
-    const prompt = ChatPromptTemplate.fromMessages([
-      ['system', 'You are a world class technical documentation writer.'],
-      ['user', '{input}'],
-    ]);
-    const chain = prompt.pipe(this.chatModel).pipe(this.outputParser);
-    const res = await chain.invoke({
-      input: 'what is LangSmith?',
+    const docs = await this.loader.load();
+    const splitter = new RecursiveCharacterTextSplitter();
+
+    const splitDocs = await splitter.splitDocuments(docs);
+    const embeddings = new OpenAIEmbeddings();
+    const vectorstore = await MemoryVectorStore.fromDocuments(
+      splitDocs,
+      embeddings,
+    );
+
+    const prompt =
+      ChatPromptTemplate.fromTemplate(`Answer the following question based only on the provided context:
+
+          <context>
+          {context}
+          </context>
+
+          Question: {input}`);
+
+    const documentChain = await createStuffDocumentsChain({
+      llm: this.chatModel,
+      prompt,
     });
-    console.log(res);
+    const retriever = vectorstore.asRetriever();
+
+    const retrievalChain = await createRetrievalChain({
+      combineDocsChain: documentChain,
+      retriever,
+    });
+
+    const result = await retrievalChain.invoke({
+      input: 'what is Openmesh?',
+    });
+
+    console.log(result.answer);
   }
 }
