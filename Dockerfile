@@ -1,4 +1,3 @@
-# First stage - builder
 FROM ubuntu:latest AS builder
 
 # Installing python and nodejs
@@ -9,14 +8,18 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Installing nodejs dependencies
+# Installing nodejs dep
 COPY package*.json ./
 RUN npm install
 
 COPY . .
 RUN npm run build
 
-# Second stage - final image
+# Installing python dep
+COPY requirements.txt ./
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Second step - final image
 FROM ubuntu:latest
 
 WORKDIR /app
@@ -30,7 +33,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
-# Install python dependencies
+# Copy python dep installed
 COPY --from=builder /app/requirements.txt ./
 RUN pip3 install --no-cache-dir -r requirements.txt
 

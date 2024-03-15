@@ -59,7 +59,6 @@
     "fast-csv": "^4.3.6",
     "form-data": "^4.0.0",
     "googleapis": "^114.0.0",
-    "hardhat": "^2.12.7",
     "langchain": "^0.1.28",
     "linkify-it": "^4.0.1",
     "lodash": "^4.17.21",
@@ -82,7 +81,6 @@
     "rxjs": "^7.2.0",
     "simple-crypto-js": "^3.0.1",
     "speakeasy": "^2.0.0",
-    "stellar-sdk": "^10.4.1",
     "streamifier": "^0.1.1",
     "swagger-ui-express": "^4.6.0",
     "uuid": "^9.0.0"
