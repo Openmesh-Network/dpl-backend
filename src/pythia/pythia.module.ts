@@ -10,6 +10,7 @@ import { PythiaService } from './pythia.service';
 import { PythiaController } from './pythia.controller';
 import { LLMInstanceService } from './llm/llm.service';
 import { DeployerService } from './llm/deployer.service';
+import { ChatbotService } from './llm/chatbot.service';
 
 @Module({
   imports: [
@@ -34,8 +35,9 @@ import { DeployerService } from './llm/deployer.service';
     PythiaService,
     LLMInstanceService,
     DeployerService,
+    ChatbotService,
     PrismaService,
   ],
-  exports: [PythiaService, LLMInstanceService, DeployerService],
+  exports: [PythiaService, LLMInstanceService, ChatbotService, DeployerService],
 })
 export class PythiaModule {}
