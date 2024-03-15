@@ -18,7 +18,7 @@ export class ChatbotService {
   ) {}
 
   chatModel = new ChatOpenAI({
-    openAIApiKey: ' ',
+    openAIApiKey: '',
   });
   outputParser = new StringOutputParser();
 
