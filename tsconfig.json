@@ -4,6 +4,7 @@
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
+    "typeRoots": ["node_modules/cron"],
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "es2017",

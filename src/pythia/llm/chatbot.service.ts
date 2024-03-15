@@ -24,7 +24,7 @@ export class ChatbotService {
   ) {}
 
   chatModel = new ChatOpenAI({
-    openAIApiKey: '',
+    openAIApiKey: process.env.OPEN_AI_KEY,
   });
   outputParser = new StringOutputParser();
   loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
