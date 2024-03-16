@@ -24,7 +24,7 @@ export class ChatbotService {
   ) {}
 
   chatModel = new ChatOpenAI({
-    openAIApiKey: process.env.OPEN_AI_KEY,
+    openAIApiKey: process.env.OPENAI_API_KEY,
   });
   outputParser = new StringOutputParser();
   loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
@@ -61,7 +61,7 @@ export class ChatbotService {
     });
 
     const result = await retrievalChain.invoke({
-      input: 'what is Openmesh?',
+      input: 'how muc openmesh already englobs of the web3 data?',
     });
 
     console.log(result.answer);
