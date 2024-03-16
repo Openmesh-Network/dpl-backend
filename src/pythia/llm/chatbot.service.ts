@@ -41,29 +41,7 @@ export class ChatbotService {
       embeddings,
     );
 
-    const prompt =
-      ChatPromptTemplate.fromTemplate(`Answer the following question based only on the provided context:
-
-          <context>
-          {context}
-          </context>
-
-          Question: {input}`);
-
-    const documentChain = await createStuffDocumentsChain({
-      llm: this.chatModel,
-      prompt,
-    });
     const retriever = vectorstore.asRetriever();
-
-    // const retrievalChain = await createRetrievalChain({
-    //   combineDocsChain: documentChain,
-    //   retriever,
-    // });
-
-    // const result = await retrievalChain.invoke({
-    //   input: 'how muc openmesh already englobs of the web3 data?',
-    // });
 
     const historyAwarePrompt = ChatPromptTemplate.fromMessages([
       new MessagesPlaceholder('chat_history'),
@@ -99,11 +77,11 @@ export class ChatbotService {
       combineDocsChain: historyAwareCombineDocsChain,
     });
 
-    const result2 = await conversationalRetrievalChain.invoke({
+    const result = await conversationalRetrievalChain.invoke({
       chat_history: [],
       input: 'What is openmesh?',
     });
 
-    console.log(result2.answer);
+    console.log(result.answer);
   }
 }
