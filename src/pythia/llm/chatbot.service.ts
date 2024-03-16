@@ -15,6 +15,7 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
 import { createRetrievalChain } from 'langchain/chains/retrieval';
+import { createHistoryAwareRetriever } from 'langchain/chains/history_aware_retriever';
 
 @Injectable()
 export class ChatbotService {
@@ -55,15 +56,54 @@ export class ChatbotService {
     });
     const retriever = vectorstore.asRetriever();
 
-    const retrievalChain = await createRetrievalChain({
-      combineDocsChain: documentChain,
+    // const retrievalChain = await createRetrievalChain({
+    //   combineDocsChain: documentChain,
+    //   retriever,
+    // });
+
+    // const result = await retrievalChain.invoke({
+    //   input: 'how muc openmesh already englobs of the web3 data?',
+    // });
+
+    const historyAwarePrompt = ChatPromptTemplate.fromMessages([
+      new MessagesPlaceholder('chat_history'),
+      ['user', '{input}'],
+      [
+        'user',
+        'Given the above conversation, generate a search query to look up in order to get information relevant to the conversation',
+      ],
+    ]);
+
+    const historyAwareRetrievalPrompt = ChatPromptTemplate.fromMessages([
+      [
+        'system',
+        "Answer the user's questions based on the below context:\n\n{context}",
+      ],
+      new MessagesPlaceholder('chat_history'),
+      ['user', '{input}'],
+    ]);
+
+    const historyAwareCombineDocsChain = await createStuffDocumentsChain({
+      llm: this.chatModel,
+      prompt: historyAwareRetrievalPrompt,
+    });
+
+    const historyAwareRetrieverChain = await createHistoryAwareRetriever({
+      llm: this.chatModel,
       retriever,
+      rephrasePrompt: historyAwarePrompt,
     });
 
-    const result = await retrievalChain.invoke({
-      input: 'how muc openmesh already englobs of the web3 data?',
+    const conversationalRetrievalChain = await createRetrievalChain({
+      retriever: historyAwareRetrieverChain,
+      combineDocsChain: historyAwareCombineDocsChain,
     });
 
-    console.log(result.answer);
+    const result2 = await conversationalRetrievalChain.invoke({
+      chat_history: [],
+      input: 'What is openmesh?',
+    });
+
+    console.log(result2.answer);
   }
 }
