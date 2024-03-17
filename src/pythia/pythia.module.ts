@@ -11,6 +11,7 @@ import { PythiaController } from './pythia.controller';
 import { LLMInstanceService } from './llm/llm.service';
 import { DeployerService } from './llm/deployer.service';
 import { ChatbotService } from './llm/chatbot.service';
+import { ChatbotBedrockService } from './llm/chatbot-bedrock.service';
 
 @Module({
   imports: [
@@ -36,8 +37,15 @@ import { ChatbotService } from './llm/chatbot.service';
     LLMInstanceService,
     DeployerService,
     ChatbotService,
+    ChatbotBedrockService,
     PrismaService,
   ],
-  exports: [PythiaService, LLMInstanceService, ChatbotService, DeployerService],
+  exports: [
+    PythiaService,
+    LLMInstanceService,
+    ChatbotService,
+    ChatbotBedrockService,
+    DeployerService,
+  ],
 })
 export class PythiaModule {}

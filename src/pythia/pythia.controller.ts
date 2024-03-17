@@ -36,6 +36,7 @@ import {
 import { DeployerService } from './llm/deployer.service';
 import { LLMInstanceService } from './llm/llm.service';
 import { ChatbotService } from './llm/chatbot.service';
+import { ChatbotBedrockService } from './llm/chatbot-bedrock.service';
 
 @ApiTags('Pythia - Managing pythia')
 @Controller('pythia/functions')
@@ -45,6 +46,7 @@ export class PythiaController {
     private readonly llmInstanceService: LLMInstanceService,
     private readonly deployerService: DeployerService,
     private readonly chatbotService: ChatbotService,
+    private readonly chatbotBedrockService: ChatbotBedrockService,
   ) {}
   apiTokenKey = process.env.API_TOKEN_KEY;
   deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
@@ -214,5 +216,19 @@ export class PythiaController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.chatbotService.inputQuestion();
+  }
+
+  @ApiOperation({
+    summary: 'Call bot',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('inputQuestion2')
+  inputQuestion2(@Body() data: any, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.chatbotBedrockService.inputQuestion();
   }
 }

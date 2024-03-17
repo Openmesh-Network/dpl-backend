@@ -16,16 +16,24 @@ import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
 import { createRetrievalChain } from 'langchain/chains/retrieval';
 import { createHistoryAwareRetriever } from 'langchain/chains/history_aware_retriever';
+import { Bedrock } from '@langchain/community/llms/bedrock';
 
 @Injectable()
-export class ChatbotService {
+export class ChatbotBedrockService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly deployerService: DeployerService,
   ) {}
 
-  chatModel = new ChatOpenAI({
-    openAIApiKey: process.env.OPENAI_API_KEY,
+  chatModel = new Bedrock({
+    model: 'meta.llama2-70b-chat-v1', // You can also do e.g. "anthropic.claude-v2"
+    region: 'us-east-1',
+    // endpointUrl: "custom.amazonaws.com",
+    credentials: {
+      accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_S3_KEY_SECRET,
+    },
+    // modelKwargs: {},
   });
   outputParser = new StringOutputParser();
   loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
