@@ -59,10 +59,7 @@ export class ChatbotBedrockService {
       splitDocs,
       embeddings,
     );
-    console.log('using embedding2');
-    console.log('using embedding');
-    console.log('using embedding4');
-    return;
+
     const retriever = vectorstore.asRetriever();
     console.log('using embedding3');
 
