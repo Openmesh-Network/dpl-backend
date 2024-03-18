@@ -26,6 +26,7 @@ import { Request, response } from 'express';
 import axios from 'axios';
 import { UtilsService } from '../utils/utils.service';
 import { OpenmeshExpertsAuthService } from 'src/openmesh-experts/openmesh-experts-auth.service';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 
 import { features } from 'process';
 import {
@@ -34,6 +35,7 @@ import {
   GetPythiaChatDto,
   InputMessageDTO,
 } from './dto/pythia.dto';
+import { ChatbotBedrockService } from './llm/chatbot-bedrock.service';
 
 @Injectable()
 export class PythiaService {
@@ -41,6 +43,7 @@ export class PythiaService {
     private readonly prisma: PrismaService,
     private readonly utilsService: UtilsService,
     private readonly openmeshExpertsAuthService: OpenmeshExpertsAuthService,
+    private readonly chatbotBedrockService: ChatbotBedrockService,
   ) {}
 
   async createChat(dataBody: CreatePythiaChatDto, req: Request) {
@@ -62,6 +65,11 @@ export class PythiaService {
       });
     }
 
+    const chatResponse = await this.chatbotBedrockService.inputQuestion(
+      [],
+      dataBody.userInput,
+    );
+
     return await this.prisma.pythiaChat.create({
       data: {
         openmeshExpertUserId: user.id,
@@ -69,7 +77,7 @@ export class PythiaService {
           PythiaInputs: {
             create: {
               userMessage: dataBody.userInput,
-              response: 'Pythia response here blablabla',
+              response: chatResponse,
               pythiaChatId: undefined,
             },
           },
@@ -108,11 +116,25 @@ export class PythiaService {
       });
     }
 
+    const chatHistory = [];
+
+    for (let i = 0; i < pythiaChat.PythiaInputs?.length; i++) {
+      chatHistory.push(
+        new HumanMessage(pythiaChat.PythiaInputs[i].userMessage),
+      );
+      chatHistory.push(new AIMessage(pythiaChat.PythiaInputs[i].response));
+    }
+
+    const chatResponse = await this.chatbotBedrockService.inputQuestion(
+      chatHistory,
+      dataBody.userInput,
+    );
+
     return await this.prisma.pythiaInput.create({
       data: {
         pythiaChatId: dataBody.id,
         userMessage: dataBody.userInput,
-        response: 'Pythia response here blablabla',
+        response: chatResponse,
       },
     });
   }

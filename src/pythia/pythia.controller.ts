@@ -229,6 +229,6 @@ export class PythiaController {
   inputQuestion2(@Body() data: any, @Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.chatbotBedrockService.inputQuestion();
+    return this.chatbotBedrockService.inputQuestion(data.history, data.input);
   }
 }

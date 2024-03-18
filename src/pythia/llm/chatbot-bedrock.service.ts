@@ -38,7 +38,8 @@ export class ChatbotBedrockService {
   outputParser = new StringOutputParser();
   loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
 
-  async inputQuestion() {
+  // const chatHistory = [ new HumanMessage("Can LangSmith help test my LLM applications?"), new AIMessage("Yes!"), ];
+  async inputQuestion(chatHistory: any, newUserInput: string) {
     const docs = await this.loader.load();
     const splitter = new RecursiveCharacterTextSplitter();
 
@@ -100,10 +101,11 @@ export class ChatbotBedrockService {
     });
 
     const result = await conversationalRetrievalChain.invoke({
-      chat_history: [],
-      input: 'What is the number of data englobed by openmesh?',
+      chat_history: chatHistory,
+      input: newUserInput,
     });
 
     console.log(result.answer);
+    return result.answer;
   }
 }
