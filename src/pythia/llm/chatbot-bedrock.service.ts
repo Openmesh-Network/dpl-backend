@@ -43,24 +43,28 @@ export class ChatbotBedrockService {
     const splitter = new RecursiveCharacterTextSplitter();
 
     const splitDocs = await splitter.splitDocuments(docs);
-    // const embeddings = new OpenAIEmbeddings();
-    const embeddings = new BedrockEmbeddings({
-      model: 'meta.llama2-70b-chat-v1',
-      region: 'us-east-1',
-      // endpointUrl: "custom.amazonaws.com",
-      credentials: {
-        accessKeyId: process.env.AWS_S3_ACCESS_KEY,
-        secretAccessKey: process.env.AWS_S3_KEY_SECRET,
-      },
-      // modelKwargs: {},
-    });
+    const embeddings = new OpenAIEmbeddings();
+    // const embeddings = new BedrockEmbeddings({
+    //   model: 'meta.llama2-70b-chat-v1',
+    //   region: 'us-east-1',
+    //   // endpointUrl: "custom.amazonaws.com",
+    //   credentials: {
+    //     accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+    //     secretAccessKey: process.env.AWS_S3_KEY_SECRET,
+    //   },
+    //   // modelKwargs: {},
+    // });
 
     const vectorstore = await MemoryVectorStore.fromDocuments(
       splitDocs,
       embeddings,
     );
-
+    console.log('using embedding2');
+    console.log('using embedding');
+    console.log('using embedding4');
+    return;
     const retriever = vectorstore.asRetriever();
+    console.log('using embedding3');
 
     const historyAwarePrompt = ChatPromptTemplate.fromMessages([
       new MessagesPlaceholder('chat_history'),

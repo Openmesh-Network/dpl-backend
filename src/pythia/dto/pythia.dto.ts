@@ -94,6 +94,17 @@ export class CreateLLMDTO {
   name: string;
 }
 
+// export class CreateLLMDTO {
+//   @IsNotEmpty()
+//   @MaxLength(1000)
+//   @IsString()
+//   @ApiProperty({
+//     description: 'The llm name',
+//     maxLength: 1000,
+//   })
+//   name: string;
+// }
+
 export class GetDTO {
   @IsNotEmpty()
   @MaxLength(1000)
