@@ -6,7 +6,6 @@ import { PrismaService } from '../../database/prisma.service';
 import { DeployerService } from './deployer.service';
 
 import { MessagesPlaceholder } from '@langchain/core/prompts';
-import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { CheerioWebBaseLoader } from 'langchain/document_loaders/web/cheerio';
@@ -17,6 +16,7 @@ import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
 import { createRetrievalChain } from 'langchain/chains/retrieval';
 import { createHistoryAwareRetriever } from 'langchain/chains/history_aware_retriever';
 import { Bedrock } from '@langchain/community/llms/bedrock';
+import { BedrockEmbeddings } from '@langchain/community/embeddings/bedrock';
 
 @Injectable()
 export class ChatbotBedrockService {
@@ -43,7 +43,18 @@ export class ChatbotBedrockService {
     const splitter = new RecursiveCharacterTextSplitter();
 
     const splitDocs = await splitter.splitDocuments(docs);
-    const embeddings = new OpenAIEmbeddings();
+    // const embeddings = new OpenAIEmbeddings();
+    const embeddings = new BedrockEmbeddings({
+      model: 'meta.llama2-70b-chat-v1',
+      region: 'us-east-1',
+      // endpointUrl: "custom.amazonaws.com",
+      credentials: {
+        accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_S3_KEY_SECRET,
+      },
+      // modelKwargs: {},
+    });
+
     const vectorstore = await MemoryVectorStore.fromDocuments(
       splitDocs,
       embeddings,
@@ -63,7 +74,9 @@ export class ChatbotBedrockService {
     const historyAwareRetrievalPrompt = ChatPromptTemplate.fromMessages([
       [
         'system',
-        " you should never answer number to the user, if the document has an number data, you shouldnt pass it to the user even if he ask. Answer the user's questions based on the below context:\n\n{context}\n\n",
+        `you should never answer number to the user, if the document has an number data, you shouldnt pass it to the user even if he ask. 
+        Answer the user's questions based on the below context:
+        \n\n{context}\n\n`,
       ],
       new MessagesPlaceholder('chat_history'),
       ['user', '{input}'],
