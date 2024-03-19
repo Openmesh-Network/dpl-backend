@@ -17,6 +17,7 @@ import { createRetrievalChain } from 'langchain/chains/retrieval';
 import { createHistoryAwareRetriever } from 'langchain/chains/history_aware_retriever';
 import { Bedrock } from '@langchain/community/llms/bedrock';
 import { BedrockEmbeddings } from '@langchain/community/embeddings/bedrock';
+import { ChatOpenAI } from '@langchain/openai';
 
 @Injectable()
 export class ChatbotBedrockService {
@@ -25,20 +26,21 @@ export class ChatbotBedrockService {
     private readonly deployerService: DeployerService,
   ) {}
 
-  // chatModel = new ChatOpenAI({
-  //   openAIApiKey: process.env.OPENAI_API_KEY,
-  // });
-  chatModel = new Bedrock({
-    model: 'meta.llama2-70b-chat-v1', // You can also do e.g. "anthropic.claude-v2"
-    region: 'us-east-1',
-    // endpointUrl: "custom.amazonaws.com",
-    credentials: {
-      accessKeyId: process.env.AWS_S3_ACCESS_KEY,
-      secretAccessKey: process.env.AWS_S3_KEY_SECRET,
-    },
-    maxTokens: 2048,
-    // modelKwargs: {},
+  chatModel = new ChatOpenAI({
+    openAIApiKey: process.env.OPENAI_API_KEY,
   });
+  // chatModel = new Bedrock({
+  //   model: 'meta.llama2-70b-chat-v1', // You can also do e.g. "anthropic.claude-v2"
+  //   region: 'us-east-1',
+  //   // endpointUrl: "custom.amazonaws.com",
+  //   credentials: {
+  //     accessKeyId: process.env.AWS_S3_ACCESS_KEY,
+  //     secretAccessKey: process.env.AWS_S3_KEY_SECRET,
+  //   },
+  //   maxTokens: 2048,
+  //   temperature: 0,
+  //   // modelKwargs: {},
+  // });
   outputParser = new StringOutputParser();
   loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
 
@@ -66,7 +68,6 @@ export class ChatbotBedrockService {
     );
 
     const retriever = vectorstore.asRetriever();
-    console.log('using embedding3');
 
     const historyAwarePrompt = ChatPromptTemplate.fromMessages([
       new MessagesPlaceholder('chat_history'),
