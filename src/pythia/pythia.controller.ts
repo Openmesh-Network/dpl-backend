@@ -32,6 +32,7 @@ import {
   GetDTO,
   GetPythiaChatDto,
   InputMessageDTO,
+  InputMessageNonUserDTO,
 } from './dto/pythia.dto';
 import { DeployerService } from './llm/deployer.service';
 import { LLMInstanceService } from './llm/llm.service';
@@ -77,6 +78,24 @@ export class PythiaController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.pythiaService.getUserChats(req);
+  }
+
+  @ApiOperation({
+    summary:
+      'Input a new non-user message in the open chat - anonymous chat - istn required to login',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('inputNonUserChatMessage')
+  inputNonUserChatMessage(
+    @Body() data: InputMessageNonUserDTO,
+    @Req() req: Request,
+  ) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.pythiaService.inputNonUserChatMessage(data);
   }
 
   @ApiOperation({

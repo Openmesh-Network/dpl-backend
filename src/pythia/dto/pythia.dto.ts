@@ -72,6 +72,37 @@ export class InputMessageDTO {
   userInput: string;
 }
 
+export class InputMessageNonUserDTO {
+  @IsNotEmpty()
+  @MaxLength(1000)
+  @IsString()
+  @ApiProperty({
+    description: 'The pythia id',
+    maxLength: 1000,
+  })
+  id: string;
+
+  @IsNotEmpty()
+  @MaxLength(10000)
+  @IsNotBlank()
+  @IsString()
+  @ApiProperty({
+    description: 'The user message',
+    maxLength: 10000,
+  })
+  userInput: string;
+
+  @IsOptional()
+  @ArrayMaxSize(1000)
+  @IsArray()
+  @IsString({ each: true })
+  @ApiProperty({
+    description: 'The chat history',
+    maxItems: 1000,
+  })
+  chatHistory: string[];
+}
+
 export class GetPythiaChatDto {
   @IsNotEmpty()
   @MaxLength(1000)

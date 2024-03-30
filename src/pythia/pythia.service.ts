@@ -34,6 +34,7 @@ import {
   CreatePythiaChatDto,
   GetPythiaChatDto,
   InputMessageDTO,
+  InputMessageNonUserDTO,
 } from './dto/pythia.dto';
 import { ChatbotBedrockService } from './llm/chatbot-bedrock.service';
 
@@ -84,6 +85,21 @@ export class PythiaService {
         }),
       },
     });
+  }
+
+  async inputNonUserChatMessage(dataBody: InputMessageNonUserDTO) {
+    const chatHistory = dataBody.chatHistory;
+
+    const chatResponse = await this.chatbotBedrockService.inputQuestion(
+      chatHistory,
+      dataBody.userInput,
+    );
+
+    return {
+      pythiaChatId: 'id',
+      userMessage: dataBody.userInput,
+      response: chatResponse,
+    };
   }
 
   async inputUserChatMessage(dataBody: InputMessageDTO, req: Request) {
