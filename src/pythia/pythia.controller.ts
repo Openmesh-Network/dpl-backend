@@ -215,20 +215,20 @@ export class PythiaController {
   inputQuestion(@Body() data: any, @Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.chatbotService.inputQuestion();
+    return this.chatbotBedrockService.inputQuestion([], 'hello what do you do');
   }
 
-  @ApiOperation({
-    summary: 'Call bot',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('inputQuestion2')
-  inputQuestion2(@Body() data: any, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.chatbotBedrockService.inputQuestion(data.history, data.input);
-  }
+  // @ApiOperation({
+  //   summary: 'Call bot',
+  // })
+  // @ApiHeader({
+  //   name: 'X-Parse-Application-Id',
+  //   description: 'Token mandatory to connect with the app',
+  // })
+  // @Post('inputQuestion2')
+  // inputQuestion2(@Body() data: any, @Req() req: Request) {
+  //   const apiToken = String(req.headers['x-parse-application-id']);
+  //   if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+  //   return this.chatbotBedrockService.inputQuestion(data.history, data.input);
+  // }
 }
