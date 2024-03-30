@@ -74,15 +74,6 @@ export class InputMessageDTO {
 
 export class InputMessageNonUserDTO {
   @IsNotEmpty()
-  @MaxLength(1000)
-  @IsString()
-  @ApiProperty({
-    description: 'The pythia id',
-    maxLength: 1000,
-  })
-  id: string;
-
-  @IsNotEmpty()
   @MaxLength(10000)
   @IsNotBlank()
   @IsString()
