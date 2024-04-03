@@ -105,6 +105,25 @@ export class GetPythiaChatDto {
   id: string;
 }
 
+export class FeedbackInput {
+  @IsNotEmpty()
+  @MaxLength(1000)
+  @IsString()
+  @ApiProperty({
+    description: 'The pythia id',
+    maxLength: 1000,
+  })
+  id: string;
+
+  @IsNotEmpty()
+  @IsBoolean()
+  @ApiProperty({
+    description: 'If it was a bad response',
+    example: true,
+  })
+  isBadResponse: boolean;
+}
+
 export class CreateLLMDTO {
   @IsNotEmpty()
   @MaxLength(1000)

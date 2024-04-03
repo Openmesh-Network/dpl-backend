@@ -32,6 +32,7 @@ import { features } from 'process';
 import {
   ChangeChatNameDTO,
   CreatePythiaChatDto,
+  FeedbackInput,
   GetPythiaChatDto,
   InputMessageDTO,
   InputMessageNonUserDTO,
@@ -246,9 +247,9 @@ export class PythiaService {
     });
 
     if (!pythiaChat) {
-      throw new BadRequestException('Chat not found here', {
+      throw new BadRequestException('Chat not found', {
         cause: new Error(),
-        description: 'Chat not found here',
+        description: 'Chat not found',
       });
     }
 
@@ -256,6 +257,25 @@ export class PythiaService {
       where: {
         id: dataBody.id,
         openmeshExpertUserId: user.id,
+      },
+    });
+  }
+
+  async insertBadFeedbackInput(dataBody: FeedbackInput, req: Request) {
+    const accessToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      accessToken,
+    );
+
+    return await this.prisma.pythiaInput.updateMany({
+      where: {
+        id: dataBody.id,
+        pythiaChat: {
+          openmeshExpertUserId: user.id,
+        },
+      },
+      data: {
+        badResponseFeedback: true,
       },
     });
   }

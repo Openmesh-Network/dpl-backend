@@ -644,6 +644,8 @@ model PythiaInput {
   userMessage   String? @db.Text  //the input that the user will create
   response      String? @db.Text  // the answer that the llm model will give to the user
 
+  badResponseFeedback Boolean @default(false)
+
   pythiaChatId String   
   pythiaChat   PythiaChat  @relation(fields: [pythiaChatId], references: [id], onDelete: Cascade)
 

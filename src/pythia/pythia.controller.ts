@@ -29,6 +29,7 @@ import {
   ChangeChatNameDTO,
   CreateLLMDTO,
   CreatePythiaChatDto,
+  FeedbackInput,
   GetDTO,
   GetPythiaChatDto,
   InputMessageDTO,
@@ -152,6 +153,20 @@ export class PythiaController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.pythiaService.deleteUserChat(data, req);
+  }
+
+  @ApiOperation({
+    summary: ' Bad feedback about certain response from the llm',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Put('insertBadFeedbackInput')
+  insertBadFeedbackInput(@Body() data: FeedbackInput, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.pythiaService.insertBadFeedbackInput(data, req);
   }
 
   @ApiOperation({
