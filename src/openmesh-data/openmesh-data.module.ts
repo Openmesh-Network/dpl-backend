@@ -6,6 +6,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { OpenmeshDataController } from './openmesh-data.controller';
 import { OpenmeshDataService } from './openmesh-data.service';
 import { UtilsModule } from 'src/utils/utils.module';
+import { OpenmeshTemplateService } from './openmesh-template-products.service';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { UtilsModule } from 'src/utils/utils.module';
     }),
   ],
   controllers: [OpenmeshDataController],
-  providers: [OpenmeshDataService, PrismaService],
+  providers: [OpenmeshDataService, OpenmeshTemplateService, PrismaService],
   exports: [OpenmeshDataService],
 })
 export class OpenmeshDataModule {}
