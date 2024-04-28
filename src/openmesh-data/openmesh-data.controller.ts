@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseInterceptors,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 
 import {
@@ -29,11 +30,16 @@ import {
   GetDatasetsDTO,
   UploadDatasetsDTO,
 } from './dto/openmesh-data.dto';
+import { GetTemplatesDTO } from './dto/openmesh-template-products.dto';
+import { OpenmeshTemplateService } from './openmesh-template-products.service';
 
 @ApiTags('Data products')
 @Controller('openmesh-data/functions')
 export class OpenmeshDataController {
-  constructor(private readonly openmeshDataService: OpenmeshDataService) {}
+  constructor(
+    private readonly openmeshDataService: OpenmeshDataService,
+    private readonly openmeshTemplateProducts: OpenmeshTemplateService,
+  ) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
   deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
@@ -67,6 +73,20 @@ export class OpenmeshDataController {
   }
 
   @ApiOperation({
+    summary: 'Return the template products',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Get('templateProducts')
+  templateProducts(@Query() data: GetTemplatesDTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.openmeshTemplateProducts.getTemplateProducts(data);
+  }
+
+  @ApiOperation({
     summary: 'Upload the datasets',
   })
   @ApiHeader({
@@ -90,6 +110,28 @@ export class OpenmeshDataController {
     return this.openmeshDataService.uploadDatasets(data);
   }
 
+  @ApiOperation({
+    summary: 'Upload the datasets',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @ApiHeader({
+    name: 'x-deeeplink-team-signature',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('uploadTemplateProducts')
+  uploadTemplateProducts(@Body() data: any[], @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    if (
+      String(req.headers['x-deeeplink-team-signature']) !==
+      this.deeplinkSignature
+    )
+      throw new UnauthorizedException();
+    return this.openmeshTemplateProducts.uploadTemplateProducts(data);
+  }
   // @Post('updateLinksDataProducts')
   // updateLinksDataProducts(@Body() data: any) {
   //   return this.openmeshDataService.updateLinksDataProducts(data);

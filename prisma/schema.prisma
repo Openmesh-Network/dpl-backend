@@ -546,6 +546,46 @@ model OpenmeshDataProviders {
   @@map("openmeshDataProviders")
 }
 
+// imports from https://docs.google.com/spreadsheets/d/10wuk398wg7PyfZ3saE0KMScWhPM1uXgHPYPkVxQap2c/edit#gid=0
+model OpenmeshTemplateProducts {
+  id String @id @default(uuid())
+
+  providerName String?
+  productName String?
+  location String?
+
+  cpuCores String?
+  cpuThreads String?
+  cpuGHZ String?
+  hasSGX Boolean @default(false)
+
+  ram String?
+
+  numberDrives  String?
+  avgSizeDrive String?
+  storageTotal String?
+
+  gpuType String?
+  gpuMemory String?
+
+  bandwidthNetwork String?
+  network String?
+
+  priceHour String?
+  priceMonth String?
+
+  availability String?
+
+  source String?
+
+  type String @default("data") // - the product type, ex: data, analytics, apis etc.
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("openmeshTemplateProducts")
+}
+
 model RecoverPassword { 
   id String @id @default(uuid())
 
