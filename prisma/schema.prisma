@@ -578,6 +578,8 @@ model OpenmeshTemplateProducts {
 
   source String?
 
+  unit String?
+
   type String @default("data") // - the product type, ex: data, analytics, apis etc.
 
   createdAt DateTime  @default(now())
