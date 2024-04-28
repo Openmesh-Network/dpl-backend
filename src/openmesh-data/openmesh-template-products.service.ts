@@ -33,7 +33,7 @@ export class OpenmeshTemplateService {
 
   //using pagination
   async getTemplateProducts(data: GetTemplatesDTO) {
-    const limit = 50;
+    const limit = 25;
     const offset = (data.page - 1) * limit;
 
     const products = await this.prisma.openmeshTemplateProducts.findMany({
