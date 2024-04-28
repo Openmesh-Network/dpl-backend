@@ -33,15 +33,28 @@ export class OpenmeshTemplateService {
 
   //using pagination
   async getTemplateProducts(data: GetTemplatesDTO) {
-    const offset = (data.page - 1) * 50;
+    const limit = 50;
+    const offset = (data.page - 1) * limit;
+
     const products = await this.prisma.openmeshTemplateProducts.findMany({
-      take: 50,
+      take: limit,
       skip: offset,
       orderBy: {
         id: 'asc',
       },
     });
-    return products;
+
+    const nextPage = await this.prisma.openmeshTemplateProducts.findMany({
+      take: 1,
+      skip: offset + limit,
+    });
+
+    const hasMorePages = nextPage.length > 0;
+
+    return {
+      products,
+      hasMorePages,
+    };
   }
 
   async getDataset(data: GetDatasetDTO) {
