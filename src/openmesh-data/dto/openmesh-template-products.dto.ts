@@ -15,11 +15,13 @@ import {
   Max,
   IsArray,
   IsEnum,
+  Min,
 } from 'class-validator';
 
 export class GetTemplatesDTO {
   @IsNotEmpty()
   @IsNumber()
+  @Min(1, { message: 'Page number must be greater than 0.' })
   @ApiProperty({
     description: 'dataset page number',
   })
