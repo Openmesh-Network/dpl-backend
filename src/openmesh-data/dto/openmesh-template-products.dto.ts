@@ -26,4 +26,12 @@ export class GetTemplatesDTO {
     description: 'dataset page number',
   })
   page: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @ApiProperty({
+    description: 'Filter by words in common in all params',
+  })
+  searchBarFilter?: string;
 }

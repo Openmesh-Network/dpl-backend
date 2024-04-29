@@ -36,7 +36,19 @@ export class OpenmeshTemplateService {
     const limit = 25;
     const offset = (data.page - 1) * limit;
 
+    let filters = {};
+    if (data.searchBarFilter) {
+      const phrase = data.searchBarFilter;
+      filters = {
+        OR: [
+          { cpuCores: { contains: phrase, mode: 'insensitive' } },
+          { providerName: { contains: phrase, mode: 'insensitive' } },
+        ],
+      };
+    }
+
     const products = await this.prisma.openmeshTemplateProducts.findMany({
+      where: filters,
       take: limit,
       skip: offset,
       orderBy: {
@@ -44,7 +56,12 @@ export class OpenmeshTemplateService {
       },
     });
 
+    const totalProducts = await this.prisma.openmeshTemplateProducts.count({
+      where: filters,
+    });
+
     const nextPage = await this.prisma.openmeshTemplateProducts.findMany({
+      where: filters,
       take: 1,
       skip: offset + limit,
     });
@@ -53,6 +70,7 @@ export class OpenmeshTemplateService {
 
     return {
       products,
+      totalProducts,
       hasMorePages,
     };
   }
