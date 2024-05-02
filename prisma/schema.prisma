@@ -588,6 +588,26 @@ model OpenmeshTemplateProducts {
   @@map("openmeshTemplateProducts")
 }
 
+//imports for the "Find your Template" Xnode webpage
+model OpenmeshTemplateData {
+  id String @id @default(uuid())
+
+  name String?
+  description String?
+  tags String[]
+
+  systemMinRequirements String?
+  systemRecommendedRequirements String?
+
+  productsIncluded String[] //ex: {productName: , description: , tags: , infraId}
+  techDiagrams String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("openmeshTemplateData")
+}
+
 model RecoverPassword { 
   id String @id @default(uuid())
 

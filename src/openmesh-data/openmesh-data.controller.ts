@@ -32,6 +32,7 @@ import {
 } from './dto/openmesh-data.dto';
 import { GetTemplatesDTO } from './dto/openmesh-template-products.dto';
 import { OpenmeshTemplateService } from './openmesh-template-products.service';
+import { GetDTO } from 'src/pythia/dto/pythia.dto';
 
 @ApiTags('Data products')
 @Controller('openmesh-data/functions')
@@ -136,4 +137,32 @@ export class OpenmeshDataController {
   // updateLinksDataProducts(@Body() data: any) {
   //   return this.openmeshDataService.updateLinksDataProducts(data);
   // }
+
+  @ApiOperation({
+    summary: 'Return the templates data',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Get('getTemplatesData')
+  getTemplatesData(@Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.openmeshTemplateProducts.getTemplatesData();
+  }
+
+  @ApiOperation({
+    summary: 'Return the template data',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Get('getTemplateData')
+  getTemplateData(@Query() data: GetDTO, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.openmeshTemplateProducts.getTemplateData(data);
+  }
 }
