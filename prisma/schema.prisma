@@ -600,7 +600,9 @@ model OpenmeshTemplateData {
   systemRecommendedRequirements String?
 
   productsIncluded String[] //ex: {productName: , description: , tags: , infraId}
-  techDiagrams String
+  techDiagrams String?
+
+  source String? @default("openmesh")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
