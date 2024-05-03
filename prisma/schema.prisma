@@ -594,6 +594,8 @@ model OpenmeshTemplateData {
 
   name String?
   description String?
+  price String?
+  logoUrl String?
   tags String[]
 
   systemMinRequirements String?
