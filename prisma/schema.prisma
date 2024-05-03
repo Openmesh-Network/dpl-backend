@@ -604,10 +604,29 @@ model OpenmeshTemplateData {
 
   source String? @default("openmesh")
 
+  TemplateDataProduct TemplateDataProduct[]
+
+  featured   Boolean @default(false)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
 
   @@map("openmeshTemplateData")
+}
+
+model TemplateDataProduct {
+  id String @id @default(uuid())
+
+  name String?
+  description String?
+
+  openmeshTemplateDataId String   
+  openmeshTemplateData   OpenmeshTemplateData  @relation(fields: [openmeshTemplateDataId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("templateDataProduct")
 }
 
 model RecoverPassword { 
