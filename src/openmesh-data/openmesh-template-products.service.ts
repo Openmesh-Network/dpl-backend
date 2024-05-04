@@ -53,9 +53,29 @@ export class OpenmeshTemplateService {
       take: limit,
       skip: offset,
       orderBy: {
-        id: 'asc',
+        id: 'asc', // Primeiramente ordenado por ID como placeholder
       },
     });
+
+    // Função para converter a string de preço em um número flutuante
+    const parsePrice = (price: string): number | null => {
+      if (!price) return null;
+      const numericPart = price.replace(/[^0-9.]/g, '');
+      const number = parseFloat(numericPart);
+      return isNaN(number) ? null : number;
+    };
+
+    // Ordenar os produtos manualmente após a recuperação do banco
+    const sortedProducts = products
+      .map((product) => ({
+        ...product,
+        parsedPriceMonth: parsePrice(product.priceMonth),
+      }))
+      .sort((a, b) => {
+        if (a.parsedPriceMonth === null) return 1;
+        if (b.parsedPriceMonth === null) return -1;
+        return a.parsedPriceMonth - b.parsedPriceMonth;
+      });
 
     const totalProducts = await this.prisma.openmeshTemplateProducts.count({
       where: filters,
@@ -70,7 +90,7 @@ export class OpenmeshTemplateService {
     const hasMorePages = nextPage.length > 0;
 
     return {
-      products,
+      products: sortedProducts,
       totalProducts,
       hasMorePages,
     };
