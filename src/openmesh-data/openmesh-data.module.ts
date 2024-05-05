@@ -7,6 +7,7 @@ import { OpenmeshDataController } from './openmesh-data.controller';
 import { OpenmeshDataService } from './openmesh-data.service';
 import { UtilsModule } from 'src/utils/utils.module';
 import { OpenmeshTemplateService } from './openmesh-template-products.service';
+import { DomuService } from './domu.service';
 
 @Module({
   imports: [
@@ -25,7 +26,12 @@ import { OpenmeshTemplateService } from './openmesh-template-products.service';
     }),
   ],
   controllers: [OpenmeshDataController],
-  providers: [OpenmeshDataService, OpenmeshTemplateService, PrismaService],
+  providers: [
+    OpenmeshDataService,
+    OpenmeshTemplateService,
+    DomuService,
+    PrismaService,
+  ],
   exports: [OpenmeshDataService],
 })
 export class OpenmeshDataModule {}
