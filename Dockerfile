@@ -24,7 +24,7 @@ RUN npm run build
 # RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Create Vonage application (replace placeholders with actual values)
-RUN vonage config:set --apiKey="b6c73620" --apiSecret="YYepZnUzr2dGDdZe" && \
+RUN vonage config:set --apiKey=b6c73620 --apiSecret=YYepZnUzr2dGDdZe && \
     vonage apps:create "My Vonage App" --capabilities=voice --voice_answer_url=http://example.com/answer --voice_event_url=http://example.com/event
 
 
