@@ -7,6 +7,9 @@ import {
 
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
+import { Vonage } from '@vonage/server-sdk';
+
+import { tokenGenerate } from '@vonage/jwt';
 
 import { JwtService } from '@nestjs/jwt';
 
@@ -31,4 +34,14 @@ export class DomuService {
     private readonly prisma: PrismaService,
     private readonly utilsService: UtilsService,
   ) {}
+
+  async createJWT() {
+    const jwtToken = tokenGenerate(
+      'c9731ae5-cac3-4fd9-a957-5bd5821462da',
+      'privateKey',
+    );
+
+    console.log('jwttoke');
+    console.log(jwtToken);
+  }
 }

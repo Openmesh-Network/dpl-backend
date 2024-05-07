@@ -606,6 +606,8 @@ model OpenmeshTemplateData {
 
   source String? @default("openmesh")
 
+  category String? @default("validatorNode")
+
   TemplateDataProduct TemplateDataProduct[]
 
   featured   Boolean @default(false)

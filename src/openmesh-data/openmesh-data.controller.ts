@@ -33,12 +33,14 @@ import {
 import { GetTemplatesDTO } from './dto/openmesh-template-products.dto';
 import { OpenmeshTemplateService } from './openmesh-template-products.service';
 import { GetDTO } from 'src/pythia/dto/pythia.dto';
+import { DomuService } from './domu.service';
 
 @ApiTags('Data products')
 @Controller('openmesh-data/functions')
 export class OpenmeshDataController {
   constructor(
     private readonly openmeshDataService: OpenmeshDataService,
+    private readonly domuService: DomuService,
     private readonly openmeshTemplateProducts: OpenmeshTemplateService,
   ) {}
 
@@ -164,5 +166,17 @@ export class OpenmeshDataController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshTemplateProducts.getTemplateData(data);
+  }
+
+  @ApiOperation({
+    summary: 'Return the template data',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('test')
+  test() {
+    return this.domuService.createJWT();
   }
 }
