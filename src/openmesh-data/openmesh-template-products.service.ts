@@ -48,6 +48,10 @@ export class OpenmeshTemplateService {
       };
     }
 
+    if (data.categoryFilter) {
+      filters['providerName'] = { equals: data.categoryFilter };
+    }
+
     const products = await this.prisma.openmeshTemplateProducts.findMany({
       where: filters,
       take: limit,

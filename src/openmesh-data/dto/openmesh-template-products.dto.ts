@@ -34,4 +34,12 @@ export class GetTemplatesDTO {
     description: 'Filter by words in common in all params',
   })
   searchBarFilter?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @ApiProperty({
+    description: 'Filter by the provider name',
+  })
+  categoryFilter?: string;
 }
