@@ -118,7 +118,11 @@ export class OpenmeshTemplateService {
 
   //using pagination
   async getTemplatesData() {
-    const products = await this.prisma.openmeshTemplateData.findMany({});
+    const products = await this.prisma.openmeshTemplateData.findMany({
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
 
     return products;
   }
