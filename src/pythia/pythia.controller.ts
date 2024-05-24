@@ -249,7 +249,10 @@ export class PythiaController {
   inputQuestion(@Body() data: any, @Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.chatbotBedrockService.inputQuestion([], 'hello what do you do');
+    // return this.chatbotBedrockService.inputQuestion([], 'hello what do you do');
+    return this.chatbotBedrockService.getSQLQuery([], 'hello what do you do');
+    // const sql = "SELECT * from trades LIMIT 10;"
+    // return this.chatbotBedrockService.getDataFromDB(sql);
   }
 
   // @ApiOperation({
@@ -265,4 +268,5 @@ export class PythiaController {
   //   if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
   //   return this.chatbotBedrockService.inputQuestion(data.history, data.input);
   // }
+
 }
