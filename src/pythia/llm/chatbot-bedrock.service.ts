@@ -5,7 +5,7 @@ Decimal.set({ precision: 60 });
 import { PrismaService } from '../../database/prisma.service';
 import { DeployerService } from './deployer.service';
 
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
 import { MessagesPlaceholder } from '@langchain/core/prompts';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
@@ -109,26 +109,55 @@ export class ChatbotBedrockService {
       combineDocsChain: historyAwareCombineDocsChain,
     });
 
-    // const result = await conversationalRetrievalChain.invoke({
-    //   chat_history: chatHistory,
-    //   input: newUserInput,
-    // });
+    const result = await conversationalRetrievalChain.invoke({
+      chat_history: chatHistory,
+      input: newUserInput,
+    });
 
-    // console.log(result.answer);
-    // return result.answer;
-    return "done";
+    console.log(result.answer);
+    return result.answer;
+    // return "done";
   }
 
+
   
-  // inputQuestion(chatHistory, prompt, showChart)
+  // inputQuestion(chatHistory: any, prompt: string, showChart: boolean)
   //       if !showChart:
   //         do rag response
   //       else:
   //         getSQLQuery
   //         getDataFromDB
+    //       makeDataVisualizable
   //         getRechartsCode
           // do normal rag response to summarise
           // return recharts code and summary
+
+  async newInputQuestion(chatHistory: any, prompt: string, showChart: boolean = false) {
+
+    if (!showChart) {
+      //decide if data needed
+      //  if data needed
+      //      getSqlQuery
+      //      getDatafromDB
+      //      get
+      //  else
+      //    getResponse
+
+    }
+    else {
+
+      // try {
+      const sql = await this.getSQLQuery(chatHistory, prompt)
+      console.log(sql)
+      const data = await this.getDataFromDB(sql)
+      const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
+
+      const summary = await this.getDataSummary(chatHistory, prompt, data)
+      
+      return {rechartsCode: rechartsCode, summary: summary}
+    }
+
+  }
 
   async getSQLQuery(chatHistory, prompt) {
 
@@ -140,30 +169,8 @@ export class ChatbotBedrockService {
     //setup vector database
     //create rag workflow
     //retrieve response
-
+ 
     //NORMAL
-
-    const chatPromptTemplate = ChatPromptTemplate.fromMessages([
-      new MessagesPlaceholder('chat_history'),
-      ['user', '{input}'],
-    ]);
-  
-    // Define the input with the given prompt
-    const input = {
-      chat_history: [],
-      input: prompt,
-    };
-  
-    // Initialize the output parser
-    // const outputParser = new StringOutputParser();
-    
-    // const result = await chatModel.invoke({
-    //   model: 'gpt-4',
-    //   messages: chatPromptTemplate.renderMessages(input),
-    //   max_tokens: 100,
-    //   temperature: 0,
-    // });
-
     const system_context = `Act as an expert programmer in SQL. You are an AI assistant that translates natural language into read-only SQL queries
     based on the provided schema: 
 
@@ -178,39 +185,58 @@ export class ChatbotBedrockService {
     );
     
     Guidelines:
-    1. Only output valid SQL querie compatible with postgresql, no other text or explanations.
+    1. Only output valid SQL querie compatible with postgresql, no other text or explanations. Especially do not output any backticks at the start or end. Do not start the response with "sql". Only a valid sql command as output.
     2. Design queries suitable for charts used in a charting library called Recharts.
     3. Trading pairs format: "BASE/QUOTE" (uppercase).
     4. Use trades_l2 table for all exchanges
     5. Exchange names are lowercase with first letter capitalised for eg. Binance, Coinbase.
-    6. Timestamp is number of seconds since unix epoch
+    6. Timestamp is number of milli seconds(ms) since unix epoch
     7. By default price is denominated in USDT unless otherwise specified
+    8. Structure the query such that no more than 1000 rows are fetched from the database
+    9. Remember, to use date_trunc with timestamp as argument you will have to convert timestamp from bigint to type timestamp using to_timestamp(timestamp / 1000.0)
+    10. Average volume over a time period is derived by summing all the sizes of all trades over that time period not by averaging the sizes of trades over that time period
     
     Prioritize:
     1. Accuracy and validity of the generated SQL query.
     2. Optimal use of the provided schema and tables.
-    3. Relevance, conciseness and clarity of the query.`
+    3. Relevance, conciseness and clarity of the query.
+    
+    For example 
+    
+    Query: "Give me a chart that shows the date on x-axis and the average volume of eth on coinbase on that date on y axis. Show this data for the 7 days before 15 may 2024"
 
-    const user_prompt = "What was the highest price of aioz in the last month on binance" 
+    Ideal response: SELECT date_trunc('day', to_timestamp(timestamp / 1000.0)) AS date,
+                    SUM(size) AS average_volume
+                    FROM
+                    trades_l2
+                    WHERE
+                    exchange = 'Coinbase'
+                    AND symbol = 'ETH/USDT'
+                    AND timestamp >= extract(epoch from timestamp '2024-05-08') * 1000
+                    AND timestamp < extract(epoch from timestamp '2024-05-15' ) * 1000 GROUP BY date ORDER BY date;
+    `
 
-    // const messages = [
-    //   { role: "system", content: system_context },
-    //   { role: "user", content: "What was the highest price of ethereum in the last 7 days on binance" }
-    // ];
+    // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
 
+    
     const messages = [
       new SystemMessage(system_context),
-      new HumanMessage(user_prompt),
     ];
+
+    //spread operator appends each value in chatHistory individually to messages resulting in a flat list
+    messages.push(...chatHistory)
+
+    // messages.push(new HumanMessage(user_prompt))
+    messages.push(new HumanMessage(prompt))
   
-    // const result = await chatModel.invoke("Test message, is the llm responding?")
     const result = await chatModel.invoke(messages)
-    console.log("result", result.content)
-    // console.log("result.answer", result.answer)
-    //return sql
+    console.log("sql", result.content)
+    // console.log("type", typeof result)
+    // console.log("type", typeof result.content)
+    return result.content
   }
 
-  async getDataFromDB(sql: string) {
+  async getDataFromDB(sql) {
     
     const client = new Client({
       user: process.env.DB_USER,
@@ -223,8 +249,8 @@ export class ChatbotBedrockService {
     try {
       await client.connect();
       const result = await client.query(sql);
-      console.log("result", result)
-      console.log("rows", result.rows)
+      // console.log("result", result)
+      console.log("data", result.rows)
       return result.rows;
     } catch (error) {
       console.error('Error executing query', error.stack);
@@ -234,7 +260,7 @@ export class ChatbotBedrockService {
     }
   }
 
-  // async getRechartsCode(chatHistory, prompt, data) {
+  async getRechartsCode(chatHistory, prompt, data) {
     
     //RAG
     //setup vector database
@@ -243,5 +269,65 @@ export class ChatbotBedrockService {
 
     //NORMAL
     //call api with relevant context
+    const system_context = `Act as an expert programmer in Recharts library in React. You are an AI assistant that translates natural language into Recharts code which helps to best visualize the
+    provided data and query. Do not include any explanations, descriptions, or other unrelated text.
+
+    Guidelines:
+    1. You have to decide the best type of chart to display to best visualize given data. You can display bar, line, area, pie chart etc. 
+    2. Only output valid Recharts code, no other text or explanations. Your output should not contain any boilerplate code. If outputting a bar chart then the output should start with <BarChart> and end with </BarChart>
+    3. Include a Title and a Legend if appropriate for easily readability of the chart
+
+    Prioritize:
+    1. Accuracy and validity of the generated Recharts code. It should be accurate enough to be directly embedded into existing react code expecting Recharts code.
+    2. Optimal use of the provided data.
+    
+    Given data to visualize:\n${data}`
+
+    // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
+
+    const messages = [
+      new SystemMessage(system_context),
+    ];
+
+    messages.push(...chatHistory)
+
+    // messages.push(new HumanMessage(user_prompt))
+    messages.push(new HumanMessage(prompt))
+
+    const result = await this.chatModel.invoke(messages)
+    console.log("recharts", result.content)
+    return result.content
+  }
+
+  async getDataSummary(chatHistory, prompt, data) {
+    
+    const system_context = `Act as an expert in Crypto, Web3 and Blockchain technology. You are an AI assistant that summarizes given data and also helps answer any queries regarding the data in a 
+    most concise, helpful and useful manner.
+
+    Guidelines:
+    1. You have to best answer the given query using the given data. If the query asks a question, answer the question as best possible.
+    2. If summarizing the data will help address the query then you should summarize the data.
+
+    Prioritize:
+    1. Accuracy and validity of the generated response.
+    2. Optimal use of the provided data.
+    
+    Given data to visualize:\n${data}`
+
+    // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
+
+    const messages = [
+      new SystemMessage(system_context),
+    ];
+
+    messages.push(...chatHistory)
+
+    // messages.push(new HumanMessage(user_prompt))
+    messages.push(new HumanMessage(prompt))
+
+    const result = await this.chatModel.invoke(messages)
+    console.log("summary", result.content)
+    return result.content
+  }
 
 }

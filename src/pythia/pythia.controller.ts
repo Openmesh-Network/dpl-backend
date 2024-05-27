@@ -249,8 +249,55 @@ export class PythiaController {
   inputQuestion(@Body() data: any, @Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+
+    const data1 = `[
+              {
+                  "exchange": "Binance",
+                  "trading_volume": 2685773.9500000686
+              },
+              {
+                  "exchange": "Okx",
+                  "trading_volume": 514174.6446540662
+              }
+            ]`
+
+    const data2 = `[
+      {
+        "date": "2024-05-01T00:00:00Z",
+        "average_volume": 12843.947088879631
+      },
+      {
+        "date": "2024-05-02T00:00:00Z",
+        "average_volume": 6327.4534908599835
+      },
+      {
+        "date": "2024-05-03T00:00:00Z",
+        "average_volume": 4818.880204149982
+      },
+      {
+        "date": "2024-05-04T00:00:00Z",
+        "average_volume": 3369.8290032999944
+      },
+      {
+        "date": "2024-05-05T00:00:00Z",
+        "average_volume": 4019.9601397300016
+      },
+      {
+        "date": "2024-05-06T00:00:00Z",
+        "average_volume": 7967.200585189992
+      },
+      {
+        "date": "2024-05-07T00:00:00Z",
+        "average_volume": 6247.122841229915
+      }
+    ]`
+
+    const avgVolPrompt = "how me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024"
+    
     // return this.chatbotBedrockService.inputQuestion([], 'hello what do you do');
-    return this.chatbotBedrockService.getSQLQuery([], 'hello what do you do');
+    return this.chatbotBedrockService.newInputQuestion([], avgVolPrompt, true);
+    // return this.chatbotBedrockService.getSQLQuery([], 'show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024');
+    // return this.chatbotBedrockService.getRechartsCode([], 'show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024', data2);
     // const sql = "SELECT * from trades LIMIT 10;"
     // return this.chatbotBedrockService.getDataFromDB(sql);
   }
