@@ -292,10 +292,13 @@ export class PythiaController {
       }
     ]`
 
-    const avgVolPrompt = "how me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024"
+    const avgEthVolPrompt = "show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024"
+    const avgVolPrompt = "show me a chart of average daily volume of all spot assets traded on coinbase between 01/05/2024 and 08/05/2024"
+    const highestEthPricePrompt = "show me the highest price of eth on each day on coinbase between 01/05/24 and 08/05/24"
+    const prompt = "what is web3? what is openmesh?"
     
     // return this.chatbotBedrockService.inputQuestion([], 'hello what do you do');
-    return this.chatbotBedrockService.newInputQuestion([], avgVolPrompt, true);
+    return this.chatbotBedrockService.newInputQuestion([], highestEthPricePrompt, true);
     // return this.chatbotBedrockService.getSQLQuery([], 'show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024');
     // return this.chatbotBedrockService.getRechartsCode([], 'show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024', data2);
     // const sql = "SELECT * from trades LIMIT 10;"

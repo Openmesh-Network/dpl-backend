@@ -31,6 +31,7 @@ export class ChatbotBedrockService {
 
   chatModel = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
+    modelName: 'gpt-4'
   });
   // chatModel = new Bedrock({
   //   model: 'meta.llama2-70b-chat-v1', // You can also do e.g. "anthropic.claude-v2"
@@ -142,28 +143,39 @@ export class ChatbotBedrockService {
       //      get
       //  else
       //    getResponse
+      // this.inputQuestion(chatHistory, prompt)
+      const response = await this.getGenericResponse(chatHistory, prompt)
 
+      return response
     }
     else {
-
+      
+      //check if query is even asking for data
       // try {
       const sql = await this.getSQLQuery(chatHistory, prompt)
       // console.log(sql)
       const data = await this.getDataFromDB(sql)
+      // console.log ("data", data)
+      // console.log("array type of ", typeof [])
+      // console.log("data type of", typeof data)
+      // console.log("data row ", data[0])
+      // console.log("data row type of ", typeof data[0])
+
+
       const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
 
       const summary = await this.getDataSummary(chatHistory, prompt, data)
       
-      return {rechartsCode: rechartsCode, summary: summary}
+      return {data: data, rechartsCode: rechartsCode, summary: summary}
     }
 
   }
 
   async getSQLQuery(chatHistory, prompt) {
 
-    const chatModel = new ChatOpenAI({
-      openAIApiKey: process.env.OPENAI_API_KEY,
-    });
+    // const chatModel = new ChatOpenAI({
+    //   openAIApiKey: process.env.OPENAI_API_KEY,
+    // });
 
     //RAG
     //setup vector database
@@ -195,6 +207,7 @@ export class ChatbotBedrockService {
     8. Structure the query such that no more than 1000 rows are fetched from the database
     9. Remember, to use date_trunc with timestamp as argument you will have to convert timestamp from bigint to type timestamp using to_timestamp(timestamp / 1000.0)
     10. Average volume over a time period is derived by summing all the sizes of all trades over that time period not by averaging the sizes of trades over that time period
+    11. Use descriptive names for the selected columns. For eg. if query asks for recent price of eth. Then SELECT price as recent_price_eth instead of SELECT price as price ...
     
     Prioritize:
     1. Accuracy and validity of the generated SQL query.
@@ -206,7 +219,7 @@ export class ChatbotBedrockService {
     Query: "Give me a chart that shows the date on x-axis and the average volume of eth on coinbase on that date on y axis. Show this data for the 7 days before 15 may 2024"
 
     Ideal response: SELECT date_trunc('day', to_timestamp(timestamp / 1000.0)) AS date,
-                    SUM(size) AS average_volume
+                    SUM(size) AS average volume of ethereum on coinbase
                     FROM
                     trades_l2
                     WHERE
@@ -229,7 +242,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
   
-    const result = await chatModel.invoke(messages)
+    const result = await this.chatModel.invoke(messages)
     console.log("sql", result.content)
     // console.log("type", typeof result)
     // console.log("type", typeof result.content)
@@ -251,6 +264,7 @@ export class ChatbotBedrockService {
       const result = await client.query(sql);
       // console.log("result", result)
       console.log("data", result.rows)
+      // console.log("date type", typeof result.rows[0]['date'])
       return result.rows;
     } catch (error) {
       console.error('Error executing query', error.stack);
@@ -274,9 +288,11 @@ export class ChatbotBedrockService {
 
     Guidelines:
     1. You have to decide the best type of chart to display to best visualize given data. You can display bar, line, area, pie chart etc. 
-    2. Only output valid Recharts code, no other text or explanations. Your output should not contain any boilerplate code. If outputting a bar chart then the output should start with <BarChart> and end with </BarChart>
+    2. Only output valid Recharts code, no other text or explanations. Your output should not contain any boilerplate code. If outputting a bar chart then the output should start with <BarChart data = {data}> and end with </BarChart>. 
+    You can add other attributes to the chart if needed.
     3. Include a Title and a Legend if appropriate for easily readability of the chart
     4. The given data is the output of the given query to the database to fetch data that is most relevant to answer the query. Take into account both the query and the given data to generate your response.
+    5. The data key for <XAxis> and <YAxis> should be exactly the same as one of the columns of the given data so it can be rendered correctly.
 
     Prioritize:
     1. Accuracy and validity of the generated Recharts code. It should be accurate enough to be directly embedded into existing react code expecting Recharts code.
@@ -306,13 +322,27 @@ export class ChatbotBedrockService {
     most concise, helpful and useful manner.
 
     Guidelines:
-    1. You have to best answer the given query using the given data. If the query asks a question, answer the question as best possible.
+    1. If the query asks a question, answer the question as best possible using the given data.
     2. If summarizing the data will help address the query then you should summarize the data.
-    3. Do not output a chart or table. Your job is to just provide a textual summary or helpful answer. A different agent will display the chart to the user.
+    3. Do not output a chart or table or data of any kind. Your job is to just provide a textual summary or helpful answer. A different agent will display the chart to the user.
+    4. Do not respond with I can't show a chart. That's not your job. The given query is ran through other AI agents before coming to you. Other agents will render a chart and fetch required data.
+    Your job is to use the given data and either summarize it or answer the question if the original query contains a question.
+    5. Do not mention any other agents. The agent architecture is for the backend, the user just knows they're chatting to a chatbot.
+    6. You should only output a textual description and nothing else.
 
     Prioritize:
     1. Accuracy and validity of the generated response.
-    2. Optimal use of the provided data.`
+    2. Optimal use of the provided data.
+    
+    For eg. 
+    
+    Given Query: show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
+    
+    Given data: ${data}
+    
+    Ideal Response: The chart shows the average daily volume of ethereum on coinbase between the dates 01/05/2024 and 08/05/2024. 
+    The highest volume was 12843 on 1st May and the lowest volume was on 4th May`
+    
     
     // Given data to visualize:\n${data}`
 
@@ -326,13 +356,38 @@ export class ChatbotBedrockService {
 
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
-
-    const data_context = 'The given prompt was given to a database agent which fetched the relevant data required by the above query. Use this data and the query to present a coherent response.'
+    // messages.push(new HumanMessage(''))
+    
+    const data_context = `The given prompt was given to a database agent which fetched the relevant data required by the above query. Use this data and the query to present a coherent response.
+    
+    The data is an array of objects where each object represents a row of data. 
+    
+    Given data: ${data}`
 
     messages.push(new SystemMessage(data_context))
 
     const result = await this.chatModel.invoke(messages)
     console.log("summary", result.content)
+    return result.content
+  }
+
+  async getGenericResponse(chatHistory, prompt) {
+    
+    const system_context = `Act as an expert in Crypto, Web3 and Blockchain technology. You are a helpful assistant who provide responses to user questions based on the context in crypto, 
+    blockchain and web3 only.`
+
+    const messages = [
+      new SystemMessage(system_context),
+    ];
+
+    messages.push(...chatHistory)
+
+    // messages.push(new HumanMessage(user_prompt))
+    messages.push(new HumanMessage(prompt))
+
+    const result = await this.chatModel.invoke(messages)
+
+    console.log("generic response", result.content)
     return result.content
   }
 
