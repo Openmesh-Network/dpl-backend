@@ -148,7 +148,7 @@ export class ChatbotBedrockService {
 
       // try {
       const sql = await this.getSQLQuery(chatHistory, prompt)
-      console.log(sql)
+      // console.log(sql)
       const data = await this.getDataFromDB(sql)
       const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
 
@@ -276,6 +276,7 @@ export class ChatbotBedrockService {
     1. You have to decide the best type of chart to display to best visualize given data. You can display bar, line, area, pie chart etc. 
     2. Only output valid Recharts code, no other text or explanations. Your output should not contain any boilerplate code. If outputting a bar chart then the output should start with <BarChart> and end with </BarChart>
     3. Include a Title and a Legend if appropriate for easily readability of the chart
+    4. The given data is the output of the given query to the database to fetch data that is most relevant to answer the query. Take into account both the query and the given data to generate your response.
 
     Prioritize:
     1. Accuracy and validity of the generated Recharts code. It should be accurate enough to be directly embedded into existing react code expecting Recharts code.
@@ -307,12 +308,13 @@ export class ChatbotBedrockService {
     Guidelines:
     1. You have to best answer the given query using the given data. If the query asks a question, answer the question as best possible.
     2. If summarizing the data will help address the query then you should summarize the data.
+    3. Do not output a chart or table. Your job is to just provide a textual summary or helpful answer. A different agent will display the chart to the user.
 
     Prioritize:
     1. Accuracy and validity of the generated response.
-    2. Optimal use of the provided data.
+    2. Optimal use of the provided data.`
     
-    Given data to visualize:\n${data}`
+    // Given data to visualize:\n${data}`
 
     // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
 
@@ -324,6 +326,10 @@ export class ChatbotBedrockService {
 
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
+
+    const data_context = 'The given prompt was given to a database agent which fetched the relevant data required by the above query. Use this data and the query to present a coherent response.'
+
+    messages.push(new SystemMessage(data_context))
 
     const result = await this.chatModel.invoke(messages)
     console.log("summary", result.content)
