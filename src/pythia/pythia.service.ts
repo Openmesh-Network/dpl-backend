@@ -76,22 +76,23 @@ export class PythiaService {
     //   dataBody.userInput,
     // );
 
-    return await this.prisma.pythiaChat.create({
-      data: {
-        openmeshExpertUserId: user.id,
-        ...(dataBody.userInput && {
-          PythiaInputs: {
-            create: {
-              userMessage: dataBody.userInput,
-              response: chatResponse.response,
-              showChart: chatResponse.showChart,
-              pythiaChatId: undefined,
+    // return await this.prisma.pythiaChat.create({
+    //   data: {
+    //     openmeshExpertUserId: user.id,
+    //     ...(dataBody.userInput && {
+    //       PythiaInputs: {
+    //         create: {
+    //           userMessage: dataBody.userInput,
+    //           response: chatResponse,
+    //           // response: chatResponse.response,
+    //           // showChart: chatResponse.showChart,
+    //           pythiaChatId: undefined,
 
-            },
-          },
-        }),
-      },
-    });
+    //         },
+    //       },
+    //     }),
+    //   },
+    // });
   }
 
   async inputNonUserChatMessage(dataBody: InputMessageNonUserDTO) {
@@ -167,7 +168,7 @@ export class PythiaService {
         pythiaChatId: dataBody.id,
         userMessage: dataBody.userInput,
         response: JSON.stringify(chatResponse),
-        showChart: chatResponse.showChart
+        // showChart: chatResponse.showChart
       },
     });
   }

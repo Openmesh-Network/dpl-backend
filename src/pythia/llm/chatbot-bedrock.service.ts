@@ -163,7 +163,8 @@ export class ChatbotBedrockService {
       // this.inputQuestion(chatHistory, prompt)
       const response = await this.getGenericResponse(chatHistory, prompt)
 
-      return {response: response, showChart: false}
+      return response
+      // return {response: response, showChart: false}
     }
     else {
       
@@ -182,10 +183,15 @@ export class ChatbotBedrockService {
       const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
 
       const summary = await this.getDataSummary(chatHistory, prompt, data)
+
+      const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
       
-      return {response: {data: data, rechartsCode: rechartsCode, summary: summary},
-               showChart: true}
+      return response
     }
+      
+    //   return {response: {data: data, rechartsCode: rechartsCode, summary: summary},
+    //            showChart: true}
+    // }
 
   }
 
