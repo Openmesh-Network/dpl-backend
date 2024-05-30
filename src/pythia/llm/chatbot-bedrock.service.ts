@@ -31,7 +31,7 @@ export class ChatbotBedrockService {
 
   chatModel = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: 'gpt-4'
+    // modelName: 'gpt-4'
   });
   // chatModel = new Bedrock({
   //   model: 'meta.llama2-70b-chat-v1', // You can also do e.g. "anthropic.claude-v2"
@@ -123,6 +123,23 @@ export class ChatbotBedrockService {
 
   
   // inputQuestion(chatHistory: any, prompt: string, showChart: boolean)
+          // isDataRequired
+          // idealResponseStyle
+
+          // if !isDataRequired
+          //   getGenericResponse
+
+          // else
+          //   getSQLQuery
+          //   getDataFromDB
+            
+          //   if idealResponseStyle == 'chart'
+          //     getRechartsCode
+          //     return rechartsCode, showChart = true, data
+          //   else:
+          //     getDataSummary
+          //     return response, showChart = false, data
+
   //       if !showChart:
   //         do rag response
   //       else:
@@ -146,7 +163,7 @@ export class ChatbotBedrockService {
       // this.inputQuestion(chatHistory, prompt)
       const response = await this.getGenericResponse(chatHistory, prompt)
 
-      return response
+      return {response: response, showChart: false}
     }
     else {
       
@@ -166,7 +183,8 @@ export class ChatbotBedrockService {
 
       const summary = await this.getDataSummary(chatHistory, prompt, data)
       
-      return {data: data, rechartsCode: rechartsCode, summary: summary}
+      return {response: {data: data, rechartsCode: rechartsCode, summary: summary},
+               showChart: true}
     }
 
   }
@@ -207,19 +225,20 @@ export class ChatbotBedrockService {
     8. Structure the query such that no more than 1000 rows are fetched from the database
     9. Remember, to use date_trunc with timestamp as argument you will have to convert timestamp from bigint to type timestamp using to_timestamp(timestamp / 1000.0)
     10. Average volume over a time period is derived by summing all the sizes of all trades over that time period not by averaging the sizes of trades over that time period
-    11. Use descriptive names for the selected columns. For eg. if query asks for recent price of eth. Then SELECT price as recent_price_eth instead of SELECT price as price ...
     
     Prioritize:
     1. Accuracy and validity of the generated SQL query.
     2. Optimal use of the provided schema and tables.
     3. Relevance, conciseness and clarity of the query.
+    4. Do not start your response with the string 'sql' under any circumstances
+
     
     For example 
     
     Query: "Give me a chart that shows the date on x-axis and the average volume of eth on coinbase on that date on y axis. Show this data for the 7 days before 15 may 2024"
 
     Ideal response: SELECT date_trunc('day', to_timestamp(timestamp / 1000.0)) AS date,
-                    SUM(size) AS average volume of ethereum on coinbase
+                    SUM(size) AS avg_vol_eth
                     FROM
                     trades_l2
                     WHERE
@@ -297,8 +316,62 @@ export class ChatbotBedrockService {
     Prioritize:
     1. Accuracy and validity of the generated Recharts code. It should be accurate enough to be directly embedded into existing react code expecting Recharts code.
     2. Optimal use of the provided data.
+
+    For example:
+
+    Example data: data =  [
+      {
+        date: "2024-05-01T00:00:00.000Z",
+        avg_vol_eth: 12843.94708887969,
+      },
+      {
+        date: "2024-05-02T00:00:00.000Z",
+        avg_vol_eth: 6327.453490859986,
+      },
+      {
+        date: "2024-05-03T00:00:00.000Z",
+        avg_vol_eth: 4818.880204149984,
+      },
+      {
+        date: "2024-05-04T00:00:00.000Z",
+        avg_vol_eth: 3369.8290032999944,
+      },
+      {
+        date: "2024-05-05T00:00:00.000Z",
+        avg_vol_eth: 4019.9601397300016,
+      },
+      {
+        date: "2024-05-06T00:00:00.000Z",
+        avg_vol_eth: 7967.200585189962,
+      },
+      {
+        date: "2024-05-07T00:00:00.000Z",
+        avg_vol_eth: 6247.122841229904,
+      },
+
+      Example Query: show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
+
+      Ideal Response: 
+
+      <LineChart
+        data={data}
+        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis dataKey="avg_vol_eth" />
+        <Tooltip />
+        <Legend verticalAlign="top" wrapperStyle={{ lineHeight: "40px" }} />
+        <Line
+          type="monotone"
+          dataKey=""
+          stroke="#8884d8"
+          activeDot={{ r: 8 }}
+        />
+      </LineChart>
+    ];
     
-    Given data to visualize:\n${data}`
+    Given data to visualize:\n${JSON.stringify(data)}`
 
     // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
 
@@ -336,9 +409,37 @@ export class ChatbotBedrockService {
     
     For eg. 
     
-    Given Query: show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
+    Example Query: show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
     
-    Given data: ${data}
+    Example data: data =  [
+      {
+        date: "2024-05-01T00:00:00.000Z",
+        avg_vol_eth: 12843.94708887969,
+      },
+      {
+        date: "2024-05-02T00:00:00.000Z",
+        avg_vol_eth: 6327.453490859986,
+      },
+      {
+        date: "2024-05-03T00:00:00.000Z",
+        avg_vol_eth: 4818.880204149984,
+      },
+      {
+        date: "2024-05-04T00:00:00.000Z",
+        avg_vol_eth: 3369.8290032999944,
+      },
+      {
+        date: "2024-05-05T00:00:00.000Z",
+        avg_vol_eth: 4019.9601397300016,
+      },
+      {
+        date: "2024-05-06T00:00:00.000Z",
+        avg_vol_eth: 7967.200585189962,
+      },
+      {
+        date: "2024-05-07T00:00:00.000Z",
+        avg_vol_eth: 6247.122841229904,
+      },
     
     Ideal Response: The chart shows the average daily volume of ethereum on coinbase between the dates 01/05/2024 and 08/05/2024. 
     The highest volume was 12843 on 1st May and the lowest volume was on 4th May`
@@ -355,16 +456,16 @@ export class ChatbotBedrockService {
     messages.push(...chatHistory)
 
     // messages.push(new HumanMessage(user_prompt))
-    messages.push(new HumanMessage(prompt))
+    messages.push(new HumanMessage(prompt + `\n Use this data to respond to the above query: ${JSON.stringify(data)}`))
     // messages.push(new HumanMessage(''))
     
-    const data_context = `The given prompt was given to a database agent which fetched the relevant data required by the above query. Use this data and the query to present a coherent response.
+    // const data_context = `The given prompt was given to a database agent which fetched the relevant data required by the above query. Use this data and the query to present a coherent response.
     
-    The data is an array of objects where each object represents a row of data. 
+    // The data is an array of objects where each object represents a row of data. 
     
-    Given data: ${data}`
+    // Given data: ${data}`
 
-    messages.push(new SystemMessage(data_context))
+    // messages.push(new SystemMessage(data_context))
 
     const result = await this.chatModel.invoke(messages)
     console.log("summary", result.content)
@@ -379,7 +480,8 @@ export class ChatbotBedrockService {
     const messages = [
       new SystemMessage(system_context),
     ];
-
+ 
+    // console.log("chatHistory", chatHistory)
     messages.push(...chatHistory)
 
     // messages.push(new HumanMessage(user_prompt))

@@ -67,10 +67,14 @@ export class PythiaService {
       });
     }
 
-    const chatResponse = await this.chatbotBedrockService.inputQuestion(
+    const chatResponse = await this.chatbotBedrockService.newInputQuestion(
       [],
       dataBody.userInput,
     );
+    // const chatResponse = await this.chatbotBedrockService.inputQuestion(
+    //   [],
+    //   dataBody.userInput,
+    // );
 
     return await this.prisma.pythiaChat.create({
       data: {
@@ -79,8 +83,10 @@ export class PythiaService {
           PythiaInputs: {
             create: {
               userMessage: dataBody.userInput,
-              response: chatResponse,
+              response: chatResponse.response,
+              showChart: chatResponse.showChart,
               pythiaChatId: undefined,
+
             },
           },
         }),
@@ -91,7 +97,11 @@ export class PythiaService {
   async inputNonUserChatMessage(dataBody: InputMessageNonUserDTO) {
     const chatHistory = dataBody.chatHistory;
 
-    const chatResponse = await this.chatbotBedrockService.inputQuestion(
+    // const chatResponse = await this.chatbotBedrockService.inputQuestion(
+    //   chatHistory,
+    //   dataBody.userInput,
+    // );
+    const chatResponse = await this.chatbotBedrockService.newInputQuestion(
       chatHistory,
       dataBody.userInput,
     );
@@ -142,16 +152,22 @@ export class PythiaService {
       chatHistory.push(new AIMessage(pythiaChat.PythiaInputs[i].response));
     }
 
-    const chatResponse = await this.chatbotBedrockService.inputQuestion(
+    // const chatResponse = await this.chatbotBedrockService.inputQuestion(
+    //   chatHistory,
+    //   dataBody.userInput,
+    // );
+    const chatResponse = await this.chatbotBedrockService.newInputQuestion(
       chatHistory,
       dataBody.userInput,
+      true
     );
-
+    
     return await this.prisma.pythiaInput.create({
       data: {
         pythiaChatId: dataBody.id,
         userMessage: dataBody.userInput,
-        response: chatResponse,
+        response: JSON.stringify(chatResponse),
+        showChart: chatResponse.showChart
       },
     });
   }
