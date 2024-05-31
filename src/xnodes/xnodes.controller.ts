@@ -79,10 +79,10 @@ export class XnodesController {
   @ApiOperation({
     summary: 'Gets the services',
   })
-  // @ApiHeader({
-  //   name: 'X-Parse-Application-Id',
-  //   description: 'Token mandatory to connect with the app',
-  // })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
   @Get('getXnodeServices')
   getXnodeServices(@Body() data: GetXnodeServiceDto, @Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);

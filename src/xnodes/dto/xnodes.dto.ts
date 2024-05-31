@@ -122,7 +122,7 @@ export class XnodeHeartbeatDto {
   @ApiProperty({
     description: 'Total available RAM'
   })
-  ramMbAvailable: number;
+  ramMbTotal: number;
 
   @IsNotEmpty()
   @IsNumber()
@@ -143,7 +143,7 @@ export class XnodeHeartbeatDto {
   @ApiProperty({
     description: 'Total available storage.'
   })
-  storageMbAvailable: number;
+  storageMbTotal: number;
 }
 
 export class GetXnodeServiceDto {
