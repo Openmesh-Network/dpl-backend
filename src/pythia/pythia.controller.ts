@@ -300,7 +300,7 @@ export class PythiaController {
     const ethPairs = "what pairs of eth does coinbase have"
     
     // return this.chatbotBedrockService.inputQuestion([], 'hello what do you do');
-    return this.chatbotBedrockService.newInputQuestion([], avgEthVolPrompt, true);
+    return this.chatbotBedrockService.newInputQuestion([], ethPairs, false);
     // return this.chatbotBedrockService.getSQLQuery([], 'show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024');
     // return this.chatbotBedrockService.getRechartsCode([], 'show me a chart with average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024', data2);
     // const sql = "SELECT * from trades LIMIT 10;"

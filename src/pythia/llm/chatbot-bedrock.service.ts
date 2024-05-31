@@ -48,6 +48,16 @@ export class ChatbotBedrockService {
   outputParser = new StringOutputParser();
   loader = new CheerioWebBaseLoader('https://docs.openmesh.network/');
 
+  schema = `CREATE TABLE trades_l2 (
+    exchange character varchar,
+    symbol character varchar,
+    price double precision,
+    size double precision,
+    taker_side character varchar,
+    trade_id character varchar,
+    timestamp bigint,
+  );`
+
   // const chatHistory = [ new HumanMessage("Can LangSmith help test my LLM applications?"), new AIMessage("Yes!"), ];
   async inputQuestion(chatHistory: any, newUserInput: string) {
     const docs = await this.loader.load();
@@ -150,8 +160,35 @@ export class ChatbotBedrockService {
           // do normal rag response to summarise
           // return recharts code and summary
 
-  async newInputQuestion(chatHistory: any, prompt: string, showChart: boolean = true) {
+  async newInputQuestion(chatHistory: any, prompt: string, showChart: boolean = false) {
 
+
+    //New workflow
+
+    if (!this.isDataRequired(chatHistory, prompt)) {
+      
+      const response = await this.getGenericResponse(chatHistory, prompt)
+      return response
+    } 
+    else {
+      const sql = await this.getSQLQuery(chatHistory, prompt)
+      const data = await this.getDataFromDB(sql)
+      
+      if (this.isChartRequired(chatHistory, prompt)) {
+        const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
+        const summary = await this.getDataSummary(chatHistory, prompt, data)
+        const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
+
+        return response
+      }
+      else {
+        const summary = await this.getDataSummary(chatHistory, prompt, data)
+        return summary
+      }
+
+    }
+
+    //Old workflow
     if (!showChart) {
       //decide if data needed
       //  if data needed
@@ -161,6 +198,8 @@ export class ChatbotBedrockService {
       //  else
       //    getResponse
       // this.inputQuestion(chatHistory, prompt)
+      const chartRequired = await this.isChartRequired(chatHistory, prompt)
+      const dataRequired = await this.isDataRequired(chatHistory, prompt)
       const response = await this.getGenericResponse(chatHistory, prompt)
 
       return response
@@ -210,15 +249,7 @@ export class ChatbotBedrockService {
     const system_context = `Act as an expert programmer in SQL. You are an AI assistant that translates natural language into read-only SQL queries
     based on the provided schema: 
 
-    CREATE TABLE trades_l2 (
-      exchange character varchar,
-      symbol character varchar,
-      price double precision,
-      size double precision,
-      taker_side character varchar,
-      trade_id character varchar,
-      timestamp bigint,
-    );
+    ${this.schema}
     
     Guidelines:
     1. Only output valid SQL querie compatible with postgresql, no other text or explanations. Especially do not output any backticks at the start or end. Do not start the response with "sql". Only a valid sql command as output.
@@ -499,4 +530,72 @@ export class ChatbotBedrockService {
     return result.content
   }
 
+  async isChartRequired(chatHistory, prompt) {
+    
+    const system_context = `
+    1. You are an AI agent that only return a boolean value. 'true' or 'false'
+    2. You return true if the users prompt requests for a chart or visualization. You will also return true 
+        if the prompt doesn't explicitly request for a chart but a chart would be the best way to visualize/answer the prompt.
+    3. You return false if the best way to respond to the prompt is textual.
+
+    Example Prompt: Show me a chart of bitcoin trade sizes on coinbase per day for the last week
+    Ideal Response: true
+
+    Example Prompt: Does coinbase have a AIOZ/USDT pair?
+    Ideal Response: false
+    `
+
+    const messages = [
+      new SystemMessage(system_context),
+    ];
+ 
+    // console.log("chatHistory", chatHistory)
+    messages.push(...chatHistory)
+
+    // messages.push(new HumanMessage(user_prompt))
+    messages.push(new HumanMessage(prompt))
+
+    const result = await this.chatModel.invoke(messages)
+
+    console.log("chartRequired", result.content)
+    return result.content == 'true'
+  }
+
+  async isDataRequired(chatHistory, prompt) {
+
+    const system_context = `
+    You are an AI agent that only returns a boolean value. 'true' or 'false'
+    
+    Data from the following schema is available in a database: ${this.schema}
+
+
+    1. You return true if the users prompt would be best responded by fetching some of the data from the schema and 
+        using that to give a response to the user
+    2. You return false if the users prompt doesn't need any data that's available in the above schema to answer.
+
+    Example Prompt: Show me a chart of bitcoin trade sizes on coinbase per day for the last week
+    Ideal Response: true
+
+    Example Prompt: Does coinbase have a AIOZ/USDT pair?
+    Ideal Response: true
+
+    Example Prompt: What is web3?
+    Ideal Response: false
+    `
+
+    const messages = [
+      new SystemMessage(system_context),
+    ];
+ 
+    // console.log("chatHistory", chatHistory)
+    messages.push(...chatHistory)
+
+    // messages.push(new HumanMessage(user_prompt))
+    messages.push(new HumanMessage(prompt))
+
+    const result = await this.chatModel.invoke(messages)
+
+    console.log("isDataRequired", result.content)
+    return result.content == 'true'
+  }
 }
