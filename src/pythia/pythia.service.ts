@@ -96,12 +96,16 @@ export class PythiaService {
   }
 
   async inputNonUserChatMessage(dataBody: InputMessageNonUserDTO) {
-    const chatHistory = dataBody.chatHistory;
+    let chatHistory = dataBody.chatHistory;
 
     // const chatResponse = await this.chatbotBedrockService.inputQuestion(
     //   chatHistory,
     //   dataBody.userInput,
     // );
+
+    if (!chatHistory) {
+      chatHistory = []
+    }
     const chatResponse = await this.chatbotBedrockService.newInputQuestion(
       chatHistory,
       dataBody.userInput,

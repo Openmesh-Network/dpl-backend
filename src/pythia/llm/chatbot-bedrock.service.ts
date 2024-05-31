@@ -150,7 +150,7 @@ export class ChatbotBedrockService {
           // do normal rag response to summarise
           // return recharts code and summary
 
-  async newInputQuestion(chatHistory: any, prompt: string, showChart: boolean = false) {
+  async newInputQuestion(chatHistory: any, prompt: string, showChart: boolean = true) {
 
     if (!showChart) {
       //decide if data needed
