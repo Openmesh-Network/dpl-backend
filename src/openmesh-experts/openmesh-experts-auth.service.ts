@@ -260,9 +260,11 @@ export class OpenmeshExpertsAuthService {
       },
     });
     if (!user) {
-      throw new BadRequestException('Invalid username/password.', {
+      throw new BadRequestException('Invalid username.', {
         cause: new Error(),
-        description: 'Invalid username/password.',
+        description: 'Invalid username.',
+        // TODO: Reenable this, it's disabled for testing.
+        // description: 'Invalid username/password.',
       });
     }
     const passwordCompare = await bcrypt.compare(data.password, user.password);
@@ -273,9 +275,11 @@ export class OpenmeshExpertsAuthService {
         id: user.id,
       });
     } else {
-      throw new BadRequestException('Invalid username/password.', {
+      throw new BadRequestException('Invalid password.', {
         cause: new Error(),
-        description: 'Invalid username/password.',
+        description: 'Invalid password.',
+        // TODO: Reenable this, it's disabled for testing.
+        // description: 'Invalid username/password.',
       });
     }
 

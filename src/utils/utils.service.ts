@@ -26,7 +26,7 @@ export class UtilsService {
   private linkify;
 
   constructor(private readonly prisma: PrismaService) {
-    this.linkify = Linkify();
+    this.linkify = new Linkify();
   }
 
   //setting variables:

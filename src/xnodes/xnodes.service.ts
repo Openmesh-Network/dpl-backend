@@ -92,13 +92,6 @@ export class XnodesService {
     console.log('Final services:');
     console.log(services);
 
-    if (dataNode.isUnit) {
-      // Calls API here!
-    } else {
-      // Check API key against VPSs.
-      // .
-    }
-
     // Note(Tom): This token is for the admin service on the Xnode to identify itself for read requests/heartbeats.
     // Will be replaced with PKI at some point.
     let xnodeAccessToken = ""
@@ -108,6 +101,16 @@ export class XnodesService {
       for (let i = 0; i < 64; i++) {
         xnodeAccessToken += chars[Math.floor(Math.random() * 61)]
       }
+    }
+
+
+    if (dataNode.isUnit) {
+      // Calls API here!
+    } else {
+      // Check API key against VPSs.
+       
+      console.log('Hardcoded deployment for Hivelocity')
+
     }
 
     // Add the xnode deployment to our database.
