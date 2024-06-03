@@ -106,6 +106,7 @@ export class PythiaService {
     if (!chatHistory) {
       chatHistory = []
     }
+
     const chatResponse = await this.chatbotBedrockService.newInputQuestion(
       chatHistory,
       dataBody.userInput,
@@ -161,6 +162,7 @@ export class PythiaService {
     //   chatHistory,
     //   dataBody.userInput,
     // );
+
     const chatResponse = await this.chatbotBedrockService.newInputQuestion(
       chatHistory,
       dataBody.userInput,

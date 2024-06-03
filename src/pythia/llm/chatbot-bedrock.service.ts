@@ -31,7 +31,7 @@ export class ChatbotBedrockService {
 
   chatModel = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
-    // modelName: 'gpt-4'
+    // modelName: 'gpt-4o'
   });
   // chatModel = new Bedrock({
   //   model: 'meta.llama2-70b-chat-v1', // You can also do e.g. "anthropic.claude-v2"
@@ -164,69 +164,80 @@ export class ChatbotBedrockService {
 
 
     //New workflow
+    console.log("chat history", chatHistory)
+    console.log("prompt", prompt)
+    const isDataRequired = await this.isDataRequired(chatHistory, prompt)
 
-    if (!this.isDataRequired(chatHistory, prompt)) {
+    if (!isDataRequired) {
       
+      console.log("getting here")
       const response = await this.getGenericResponse(chatHistory, prompt)
-      return response
-    } 
+      return JSON.stringify({response: response})
+    }
     else {
+      console.log("wrong place")
       const sql = await this.getSQLQuery(chatHistory, prompt)
       const data = await this.getDataFromDB(sql)
+
+      const isChartRequired = this.isChartRequired(chatHistory, prompt)
       
-      if (this.isChartRequired(chatHistory, prompt)) {
+      if (isChartRequired) {
         const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
         const summary = await this.getDataSummary(chatHistory, prompt, data)
-        const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
+        // const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
 
-        return response
+        if (Array.isArray(data) && data.length === 0) {
+          return {response: summary}
+        } else {
+          return JSON.stringify({data: data, rechartsCode: rechartsCode, response: summary})
+        }
       }
       else {
         const summary = await this.getDataSummary(chatHistory, prompt, data)
-        return summary
+        return JSON.stringify({response: summary})
       }
 
     }
 
     //Old workflow
-    if (!showChart) {
-      //decide if data needed
-      //  if data needed
-      //      getSqlQuery
-      //      getDatafromDB
-      //      get
-      //  else
-      //    getResponse
-      // this.inputQuestion(chatHistory, prompt)
-      const chartRequired = await this.isChartRequired(chatHistory, prompt)
-      const dataRequired = await this.isDataRequired(chatHistory, prompt)
-      const response = await this.getGenericResponse(chatHistory, prompt)
+    // if (!showChart) {
+    //   //decide if data needed
+    //   //  if data needed
+    //   //      getSqlQuery
+    //   //      getDatafromDB
+    //   //      get
+    //   //  else
+    //   //    getResponse
+    //   // this.inputQuestion(chatHistory, prompt)
+    //   const chartRequired = await this.isChartRequired(chatHistory, prompt)
+    //   const dataRequired = await this.isDataRequired(chatHistory, prompt)
+    //   const response = await this.getGenericResponse(chatHistory, prompt)
 
-      return response
-      // return {response: response, showChart: false}
-    }
-    else {
+    //   return response
+    //   // return {response: response, showChart: false}
+    // }
+    // else {
       
-      //check if query is even asking for data
-      // try {
-      const sql = await this.getSQLQuery(chatHistory, prompt)
-      // console.log(sql)
-      const data = await this.getDataFromDB(sql)
-      // console.log ("data", data)
-      // console.log("array type of ", typeof [])
-      // console.log("data type of", typeof data)
-      // console.log("data row ", data[0])
-      // console.log("data row type of ", typeof data[0])
+    //   //check if query is even asking for data
+    //   // try {
+    //   const sql = await this.getSQLQuery(chatHistory, prompt)
+    //   // console.log(sql)
+    //   const data = await this.getDataFromDB(sql)
+    //   // console.log ("data", data)
+    //   // console.log("array type of ", typeof [])
+    //   // console.log("data type of", typeof data)
+    //   // console.log("data row ", data[0])
+    //   // console.log("data row type of ", typeof data[0])
 
 
-      const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
+    //   const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
 
-      const summary = await this.getDataSummary(chatHistory, prompt, data)
+    //   const summary = await this.getDataSummary(chatHistory, prompt, data)
 
-      const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
+    //   const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
       
-      return response
-    }
+    //   return response
+    // }
       
     //   return {response: {data: data, rechartsCode: rechartsCode, summary: summary},
     //            showChart: true}
@@ -596,6 +607,7 @@ export class ChatbotBedrockService {
     const result = await this.chatModel.invoke(messages)
 
     console.log("isDataRequired", result.content)
+    console.log("isData", result.content == 'true')
     return result.content == 'true'
   }
 }
