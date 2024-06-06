@@ -29,6 +29,7 @@
     "@complycube/api": "^1.1.8",
     "@ethersproject/providers": "^5.7.2",
     "@google-analytics/data": "^3.2.1",
+    "@google-cloud/bigquery": "^7.7.1",
     "@google-cloud/local-auth": "^2.1.0",
     "@google-cloud/storage": "^6.9.4",
     "@jridgewell/sourcemap-codec": "^1.4.14",
