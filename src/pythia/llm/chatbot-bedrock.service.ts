@@ -30,11 +30,19 @@ export class ChatbotBedrockService {
     private readonly prisma: PrismaService,
     private readonly deployerService: DeployerService,
   ) {}
-
+  
   chatModel = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
-    // modelName: 'gpt-4o'
   });
+
+  gpt3 = new ChatOpenAI({
+    openAIApiKey: process.env.OPENAI_API_KEY,
+  });
+
+  gpt4o = new ChatOpenAI({
+    openAIApiKey: process.env.OPENAI_API_KEY,
+    modelName: 'gpt-4o'
+  }); 
 
   keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
@@ -284,8 +292,9 @@ export class ChatbotBedrockService {
     Schema for available BigQuery tables
     ${this.bigQuerySchema}
     
-    Guidelines:
-    1. Only output valid SQL querie compatible with postgresql, no other text or explanations. Especially do not output any backticks at the start or end. Do not start the response with "sql". Only a valid sql command as output.
+    Guidelines for postgres database queries:
+    1. Only output valid SQL queries. If you're trying to query CEX trading data the SQL query should be correct according to postgresql.
+    1.a no other text or explanations. Especially do not output any backticks at the start or end. Do not start the response with "sql". Only a valid sql command as output.
     2. Design queries suitable for charts used in a charting library called Recharts.
     3. Trading pairs format: "BASE/QUOTE" (uppercase).
     4. Use trades_l2 table for all exchanges
@@ -296,6 +305,11 @@ export class ChatbotBedrockService {
     9. Remember, to use date_trunc with timestamp as argument you will have to convert timestamp from bigint to type timestamp using to_timestamp(timestamp / 1000.0)
     10. Average volume over a time period is derived by summing all the sizes of all trades over that time period not by averaging the sizes of trades over that time period
     
+    Guidelines for Big Query database queries:
+    1. If you're trying to query Big Query ethereum data set, the SQL query should be correct accoring to BigQuery SQL
+    2. Carefully examine the big query schema when writing sql query for big query. Take special care around how data type for 
+    time stamps are defined and if it needs to be converted. 
+
     Prioritize:
     1. Accuracy and validity of the generated SQL query.
     2. Optimal use of the provided schema and tables.
@@ -305,10 +319,10 @@ export class ChatbotBedrockService {
     
     For example 
     
-    Query: "Give me a chart that shows the date on x-axis and the average volume of eth on coinbase on that date on y axis. Show this data for the 7 days before 15 may 2024"
+    Query: "Give me a chart that shows the date on x-axis and the volume of eth on coinbase on that date on y axis. Show this data for the 7 days before 15 may 2024"
 
     Ideal response: SELECT date_trunc('day', to_timestamp(timestamp / 1000.0)) AS date,
-                    SUM(size) AS avg_vol_eth
+                    SUM(size) AS vol_eth
                     FROM
                     trades_l2
                     WHERE
@@ -316,6 +330,17 @@ export class ChatbotBedrockService {
                     AND symbol = 'ETH/USDT'
                     AND timestamp >= extract(epoch from timestamp '2024-05-08') * 1000
                     AND timestamp < extract(epoch from timestamp '2024-05-15' ) * 1000 GROUP BY date ORDER BY date;
+
+    Query: what was the number of the last ethereum block?
+    Ideal response: SELECT number
+                    FROM \`bigquery-public-data.crypto_ethereum.blocks\`
+                    ORDER BY timestamp DESC
+                    LIMIT 1;
+
+    Query: what was the average gas fee on eth yesterday?
+    Ideal response: SELECT AVG(gas_price) AS avg_gas_price_yesterday
+                    FROM \`bigquery-public-data.crypto_ethereum.transactions\`
+                    WHERE DATE(block_timestamp) = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
     `
 
     // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
@@ -331,7 +356,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
   
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
     console.log("sql", result.content)
     // console.log("type", typeof result)
     // console.log("type", typeof result.content)
@@ -400,7 +425,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
 
     console.log("isPostgresQuery", result.content)
     return result.content == 'true'
@@ -497,7 +522,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
     console.log("recharts", result.content)
     return result.content
   }
@@ -580,7 +605,7 @@ export class ChatbotBedrockService {
 
     // messages.push(new SystemMessage(data_context))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
     console.log("summary", result.content)
     return result.content
   }
@@ -592,17 +617,18 @@ export class ChatbotBedrockService {
     Guidelines:
     1. If the query asks a question, answer the question as best possible using the given data.
     2. If explaining the data will help address the query then you should explain the data.
-    3. If a table is the best way to describe the data, output a table.
+    3. Do not output a table. Only describe the data in text.
     4. Your job is to use the given data and either explain it or answer the question if the original query contains a question.
     5. If the data you get is empty or not sufficient to answer the query. Say that you don't have the necessary data to answer. Don't say that the data hasn't been provided.
+    6. Don't refer to the provided data. Just describe the data. The user of the chat bot can't see any data. They can only see your explanation and output.
 
     Prioritize:
     1. Accuracy and validity of the generated response.
     2. Optimal use of the provided data.
+
+    `
     
-    For eg. `
-    
-    const example = `Example Query: what was the average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
+    const example = `For eg.  Example Query: what was the average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
     Ideal Response: 
     // Given data to visualize:\n${data}`
 
@@ -615,7 +641,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt + `\n Use this data to respond to the above query: ${JSON.stringify(data)}`))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
     console.log("data description", result.content)
     return result.content
   }
@@ -635,7 +661,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
 
     console.log("generic response", result.content)
     return result.content
@@ -666,7 +692,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
 
     console.log("chartRequired", result.content)
     return result.content == 'true'
@@ -677,8 +703,11 @@ export class ChatbotBedrockService {
     const system_context = `
     You are an AI agent that only returns a boolean value. 'true' or 'false'
     
-    Data from the following schema is available in a database: ${this.schema}
-
+    Data from 2 datasets is available to the chat bot. 
+    
+    1. The first data set is trades data from cryptocurrency CEX's. It has the following schema: ${this.schema}
+    2. The second data set is big query ethereum blockchain dataset. Any data regarding ethereum blockchain like block number, 
+    transactions, tokens etc can be answered through this. It has the following schema: ${this.bigQuerySchema}
 
     1. You return true if the users prompt would be best responded by fetching some of the data from the schema and 
         using that to give a response to the user
@@ -692,6 +721,12 @@ export class ChatbotBedrockService {
 
     Example Prompt: What is web3?
     Ideal Response: false
+
+    Example Prompt: What was the last ethereum block
+    Ideal Response: true
+
+    Example Prompt: What was the average gas price on eth last month?
+    Ideal Response: true
     `
 
     const messages = [
@@ -704,7 +739,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.chatModel.invoke(messages)
+    const result = await this.gpt3.invoke(messages)
 
     console.log("isDataRequired", result.content)
     // console.log("isData", result.content == 'true')
