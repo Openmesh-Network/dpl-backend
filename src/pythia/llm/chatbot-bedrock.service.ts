@@ -41,7 +41,7 @@ export class ChatbotBedrockService {
 
   gpt4o = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: 'gpt-4o'
+    modelName: 'gpt-4o',
   }); 
 
   keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
@@ -425,7 +425,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
 
     console.log("isPostgresQuery", result.content)
     return result.content == 'true'
@@ -522,7 +522,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
     console.log("recharts", result.content)
     return result.content
   }
@@ -605,7 +605,7 @@ export class ChatbotBedrockService {
 
     // messages.push(new SystemMessage(data_context))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
     console.log("summary", result.content)
     return result.content
   }
@@ -621,16 +621,20 @@ export class ChatbotBedrockService {
     4. Your job is to use the given data and either explain it or answer the question if the original query contains a question.
     5. If the data you get is empty or not sufficient to answer the query. Say that you don't have the necessary data to answer. Don't say that the data hasn't been provided.
     6. Don't refer to the provided data. Just describe the data. The user of the chat bot can't see any data. They can only see your explanation and output.
+    7. Use the provided schema to interpret the given data. If the data is about ethereum block chain data use the BigQuery schema. Else use the Postgres cryptocurrency CEX data.
 
     Prioritize:
     1. Accuracy and validity of the generated response.
     2. Optimal use of the provided data.
 
-    `
+    Postgres Crypto CEX trades data schema: ${this.schema}
+    BigQuery Ethereum blockchain data schema: ${this.bigQuerySchema}
+
+    // Given data to describe:\n${JSON.stringify(data)}`
     
     const example = `For eg.  Example Query: what was the average daily volume of eth traded on coinbase between 01/05/2024 and 08/05/2024
     Ideal Response: 
-    // Given data to visualize:\n${data}`
+    `
 
     const messages = [
       new SystemMessage(system_context),
@@ -639,9 +643,10 @@ export class ChatbotBedrockService {
     messages.push(...chatHistory)
 
     // messages.push(new HumanMessage(user_prompt))
-    messages.push(new HumanMessage(prompt + `\n Use this data to respond to the above query: ${JSON.stringify(data)}`))
+    // messages.push(new HumanMessage(prompt + `\n Use this data to respond to the above query: ${JSON.stringify(data)}`))
+    messages.push(new HumanMessage(prompt))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
     console.log("data description", result.content)
     return result.content
   }
@@ -661,7 +666,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
 
     console.log("generic response", result.content)
     return result.content
@@ -692,7 +697,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
 
     console.log("chartRequired", result.content)
     return result.content == 'true'
@@ -727,6 +732,9 @@ export class ChatbotBedrockService {
 
     Example Prompt: What was the average gas price on eth last month?
     Ideal Response: true
+
+    Example Prompt: What was the total volume of eth on coinbase on 1 May 2024
+    Ideal Response: true
     `
 
     const messages = [
@@ -739,7 +747,7 @@ export class ChatbotBedrockService {
     // messages.push(new HumanMessage(user_prompt))
     messages.push(new HumanMessage(prompt))
 
-    const result = await this.gpt3.invoke(messages)
+    const result = await this.gpt4o.invoke(messages)
 
     console.log("isDataRequired", result.content)
     // console.log("isData", result.content == 'true')
