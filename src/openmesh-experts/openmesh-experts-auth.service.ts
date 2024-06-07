@@ -342,7 +342,7 @@ export class OpenmeshExpertsAuthService {
       },
     });
     const dataToBeHashed = `${data.address}-${user?.updatesNonce || '0'}`;
-    const hash = await this.utilsService.hashObject(dataToBeHashed);
+    const hash = this.utilsService.hashObject(dataToBeHashed);
     const finalHash = `0x${hash}`;
     const isVerified = await this.utilsService.verifiesSignedMessage(
       finalHash,
@@ -355,8 +355,9 @@ export class OpenmeshExpertsAuthService {
         description: 'Invalid signature',
       });
     }
+
     if (!user) {
-      // If not user, create it
+      // If there isn't a user on the table. Then make it.
       user = await this.prisma.openmeshExpertUser.create({
         data: {
           web3Address: data.address,

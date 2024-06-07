@@ -104,15 +104,6 @@ export class XnodesService {
     }
 
 
-    if (dataNode.isUnit) {
-      // Calls API here!
-    } else {
-      // Check API key against VPSs.
-       
-      console.log('Hardcoded deployment for Hivelocity')
-
-    }
-
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
@@ -128,15 +119,19 @@ export class XnodesService {
     // XXX: Do I need to reimplement this?
     // await this.getXnodeDeploymentLog(uuid, xnode.id);
 
+    if (dataNode.isUnit) {
+      // Calls API here!
+    } else {
+      // Check API key against VPSs.
+       
+      console.log('Hardcoded deployment for Hivelocity')
+    }
+
     return xnode;
   }
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
-    // const user = await this.openmeshExpertsAuthService.verifySessionToken(
-    //   accessToken,
-    // );
-
     const node = await this.prisma.deployment.findFirst({
       where: {
         AND: [
