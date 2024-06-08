@@ -44,10 +44,10 @@ export class ChatbotBedrockService {
     modelName: 'gpt-4o',
   }); 
 
-  keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  // keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
   bigQuery = new BigQuery({
-    keyFilename: this.keyFilename,
+    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
     projectId: process.env.GCP_PROJECT_ID
   });
 
