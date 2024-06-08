@@ -16,7 +16,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-RUN ls -la prisma && cat prisma/schema.prisma
+RUN ls prisma && cat prisma/schema.prisma
 RUN ls
 
 # Installing python dependencies - not working, need to fix
@@ -35,6 +35,7 @@ RUN apt-get update && \
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
 
 # Copy python dependencies installed - not working, need to fix
