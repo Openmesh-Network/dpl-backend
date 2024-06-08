@@ -16,6 +16,9 @@ RUN npm install
 COPY . .
 RUN npm run build
 
+RUN ls -la prisma && cat prisma/schema.prisma
+RUN ls
+
 # Installing python dependencies - not working, need to fix
 # COPY requirements.txt ./
 # RUN pip3 install --no-cache-dir -r requirements.txt
