@@ -51,6 +51,11 @@ export class ChatbotBedrockService {
     projectId: process.env.GCP_PROJECT_ID
   });
 
+  // bigQuery = new BigQuery({
+  //   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  //   projectId: process.env.GCP_PROJECT_ID
+  // });
+
   bigQuerySql = "SELECT * FROM `bigquery-public-data.crypto_ethereum.INFORMATION_SCHEMA.TABLES`;"
 
   example_data = [
@@ -216,6 +221,20 @@ export class ChatbotBedrockService {
 
     //No charts, bigQuery workflow
 
+    // const isDataRequired = await this.isDataRequired(chatHistory, prompt)
+    // if (!isDataRequired) {
+    //   const response = await this.getGenericResponse(chatHistory, prompt)
+    //   return JSON.stringify({response: response})
+    // }
+    // else {
+    //   const sql = await this.getSQLQuery(chatHistory, prompt)
+    //   const data = await this.getData(sql)
+    //   const response = await this.getDataDescription(chatHistory, prompt, data)
+
+    //   return JSON.stringify({response: response})
+    // }
+
+    //new charts workflow
     const isDataRequired = await this.isDataRequired(chatHistory, prompt)
     if (!isDataRequired) {
       const response = await this.getGenericResponse(chatHistory, prompt)
@@ -224,10 +243,29 @@ export class ChatbotBedrockService {
     else {
       const sql = await this.getSQLQuery(chatHistory, prompt)
       const data = await this.getData(sql)
+
+      const isChartRequired = await this.isChartRequired(chatHistory, prompt)
       const response = await this.getDataDescription(chatHistory, prompt, data)
+
+      if (isChartRequired) {
+        // const rechartsCode = await this.getRechartsCode(chatHistory, prompt, data)
+        // const summary = await this.getDataSummary(chatHistory, prompt, data)
+        // const response = JSON.stringify({data: data, rechartsCode: rechartsCode, summary: summary})
+
+        if (Array.isArray(data) && data.length === 0) {
+          return {response: response}
+        } else {
+          return JSON.stringify({data: data, xkey: Object.keys(data[0])[0], ykey: Object.keys(data[0])[1], response: response})
+        }
+      }
+        // else {
+        //   const summary = await this.getDataSummary(chatHistory, prompt, data)
+        //   return JSON.stringify({response: summary})
+        // }
 
       return JSON.stringify({response: response})
     }
+
 
     //Charts workflow
     // console.log("chat history", chatHistory)
@@ -341,6 +379,14 @@ export class ChatbotBedrockService {
     Ideal response: SELECT AVG(gas_price) AS avg_gas_price_yesterday
                     FROM \`bigquery-public-data.crypto_ethereum.transactions\`
                     WHERE DATE(block_timestamp) = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
+
+    Query: How many total transactions every day over the Last week on ethereum blockchain
+    Ideal response: SELECT DATE(block_timestamp) AS date,
+                    COUNT(*) AS total_transactions
+                    FROM \`bigquery-public-data.crypto_ethereum.transactions\`
+                    WHERE block_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+                    GROUP BY date
+                    ORDER BY date;
     `
 
     // const user_prompt = "Show me a chart with exchanges on x axis and trading volume for eth on 01/01/2024 on y axis on coinbase, binance and okx?" 
@@ -685,6 +731,9 @@ export class ChatbotBedrockService {
 
     Example Prompt: Does coinbase have a AIOZ/USDT pair?
     Ideal Response: false
+
+    Example Prompt: What was the highest price of eth on coinbase on 1 May 2024
+    Ideal Response: false
     `
 
     const messages = [
@@ -699,7 +748,7 @@ export class ChatbotBedrockService {
 
     const result = await this.gpt4o.invoke(messages)
 
-    console.log("chartRequired", result.content)
+    console.log("chartRequired", result.content == 'true')
     return result.content == 'true'
   }
 
