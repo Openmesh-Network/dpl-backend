@@ -65,28 +65,16 @@ export class XnodesController {
   @ApiOperation({
     summary: 'Create a xnode',
   })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app.',
-  })
   @Post('pushXnodeHeartbeat')
   pushXnodeHeartbeat(@Body() data: XnodeHeartbeatDto, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.pushXnodeHeartbeat(data, req);
   }
 
   @ApiOperation({
     summary: 'Gets the services',
   })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
   @Get('getXnodeServices')
   getXnodeServices(@Body() data: GetXnodeServiceDto, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.getXnodeServices(data, req);
   }
 
