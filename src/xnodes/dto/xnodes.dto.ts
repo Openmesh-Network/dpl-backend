@@ -71,6 +71,15 @@ export class CreateXnodeDto {
   })
   isUnit: boolean;
 
+  @IsString()
+  // XXX: Might have to allow more than max 50 services.
+  @ApiProperty({
+    required: false,
+    description: 'The nft id',
+    example: ['{}'],
+  })
+  nftId: string;
+
   @IsNotEmpty()
   @IsString()
   // XXX: Might have to allow more than max 50 services.
