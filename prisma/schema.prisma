@@ -703,6 +703,7 @@ model Deployment {
   apiKey        String?
   accessToken   String?
   heartbeatData String?
+  nftId         String
 
   openmeshExpertUserId String
   openmeshExpertUser   OpenmeshExpertUser  @relation(fields: [openmeshExpertUserId], references: [id])

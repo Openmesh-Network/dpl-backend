@@ -103,7 +103,6 @@ export class XnodesService {
       }
     }
 
-
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
