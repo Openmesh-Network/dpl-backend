@@ -46,15 +46,15 @@ export class ChatbotBedrockService {
 
   // keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-  // bigQuery = new BigQuery({
-  //   credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
-  //   projectId: process.env.GCP_PROJECT_ID
-  // });
-
   bigQuery = new BigQuery({
-    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
     projectId: process.env.GCP_PROJECT_ID
   });
+
+  // bigQuery = new BigQuery({
+  //   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  //   projectId: process.env.GCP_PROJECT_ID
+  // });
 
   bigQuerySql = "SELECT * FROM `bigquery-public-data.crypto_ethereum.INFORMATION_SCHEMA.TABLES`;"
 
