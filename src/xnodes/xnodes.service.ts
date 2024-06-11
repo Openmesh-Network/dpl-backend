@@ -101,6 +101,7 @@ export class XnodesService {
     const whitelist = [
       "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5",
     ]
+    console.log("Address: ", user.web3Address)
     let isWhitelisted = false
     for (let i = 0; i < whitelist.length; i++) {
       if (user.web3Address == whitelist) {
@@ -126,6 +127,7 @@ export class XnodesService {
       }
     }
 
+    console.log("Adding Xnode to database")
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
@@ -144,11 +146,18 @@ export class XnodesService {
     if (dataNode.isUnit) {
       xnode.apiKey = "isUnit";
 
-      // TODO (Harsh): Check that xnode.nftId is valid here!
-      let nftOwner  = this.XuContractConnect.eth.ownerOf(xnode.nftId) // STUB
-      if(nftOwner != user.web3Address){
+      // XXX: Re-add this later, removing now for sepola
+      if (!isWhitelisted) {
+        console.log("Not whitelisted")
+        // Check that xnode.nftId is valid here!
+        let nftOwner  = this.XuContractConnect.eth.ownerOf(xnode.nftId) // XXX: STUB
+        if(nftOwner != user.web3Address){
+          throw new Error(`You don't own the NFT`);
+        }
+
         throw new Error(`You don't own the NFT`);
       }
+
       // Does Xnode Unit token ownership validation prior to any action on that Xnode Unit.
       // web3.eth.getBalance(xnode.walletAddress) // STUB
 
@@ -176,7 +185,6 @@ export class XnodesService {
       const provision_unit_response = await response.json();
       if (provision_unit_response == "Deployed into hivelocity") {
         xnode.provider = "hivelocity";
-        
       } else if (provision_unit_response == "Internal server error") {
         throw new Error(`Unable to provision Xnode Unit`);
       } else {
