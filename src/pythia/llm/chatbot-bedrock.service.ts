@@ -46,15 +46,15 @@ export class ChatbotBedrockService {
 
   // keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-  bigQuery = new BigQuery({
-    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
-    projectId: process.env.GCP_PROJECT_ID
-  });
-
   // bigQuery = new BigQuery({
-  //   keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  //   credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS),
   //   projectId: process.env.GCP_PROJECT_ID
   // });
+
+  bigQuery = new BigQuery({
+    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    projectId: process.env.GCP_PROJECT_ID
+  });
 
   bigQuerySql = "SELECT * FROM `bigquery-public-data.crypto_ethereum.INFORMATION_SCHEMA.TABLES`;"
 
@@ -242,7 +242,11 @@ export class ChatbotBedrockService {
     }
     else {
       const sql = await this.getSQLQuery(chatHistory, prompt)
-      const data = await this.getData(sql)
+      const [data, xkey, ykey] = await this.getData(sql)
+
+      console.log("data", data)
+      console.log("xkey", xkey)
+      console.log("ykey", ykey)
 
       const isChartRequired = await this.isChartRequired(chatHistory, prompt)
       const response = await this.getDataDescription(chatHistory, prompt, data)
@@ -255,7 +259,7 @@ export class ChatbotBedrockService {
         if (Array.isArray(data) && data.length === 0) {
           return {response: response}
         } else {
-          return JSON.stringify({data: data, xkey: Object.keys(data[0])[0], ykey: Object.keys(data[0])[1], response: response})
+          return JSON.stringify({data: data, xkey: xkey, ykey: ykey, response: response})
         }
       }
         // else {
@@ -437,16 +441,47 @@ export class ChatbotBedrockService {
   async getData(sql) {
     const isPostgresQuery = await this.isPostgresQuery(sql)
 
+    
     let response;
-
+    let xkey;
+    let ykey;
+    
     if (isPostgresQuery) {
-      response = this.getDataFromDB(sql)
+      response = await this.getDataFromDB(sql)
+      xkey = Object.keys(response[0])[0]
+      ykey = Object.keys(response[0])[1]
+
+    if (xkey === "date") {
+
+      response = response.map(item => ({
+        [xkey]: new Date(item.date).toLocaleDateString(), // Transform date to readable format
+        [ykey]: item[ykey]
+      }));
     }
+    
+    console.log("postgres response transformed", response);
+    }
+    
     else {
-      response = this.runBigQuerySQL(sql)
+      response = await this.runBigQuerySQL(sql)
+      xkey = Object.keys(response[0])[0]
+      ykey = Object.keys(response[0])[1]
+      
+      console.log("xkey", typeof xkey)
+      console.log("ykey", typeof ykey)
+      
+      if (xkey === "date") {
+
+        response = response.map(item => ({
+          [xkey]: item[xkey]["value"],
+          [ykey]: item[ykey]
+        }));
+
+        console.log("flat response", response)
+      } 
     }
 
-    return response
+    return [response, xkey, ykey]
   }
 
   async isPostgresQuery(sql: any) {
