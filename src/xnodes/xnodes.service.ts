@@ -52,7 +52,18 @@ export class XnodesService {
     private readonly utilsService: UtilsService,
     private readonly openmeshExpertsAuthService: OpenmeshExpertsAuthService,
   ) {}
+  web3UrlProvider = process.env.WEB3_URL_PROVIDER;
+  web3Provider = new ethers.providers.JsonRpcProvider(this.web3UrlProvider);
+  XUContractAddr = process.env.XU_NFT_CONTRACT_ADDRESS;
+  XuContractConnect = new ethers.Contract(
+    this.XUContractAddr,
+    JSON.stringify(XnodeUnitContract),
+    this.web3Provider,
+  );
+  XU_CONTROLLER_URL = process.env.XU_CONTROLLER_URL;
+  XU_CONTROLLER_KEY = process.env.XU_CONTROLLER_KEY;
 
+  // TODO Clean up redundant variables from deprecated deployment architecture
   SECRET = process.env.XNODE_SECRET;
   WEBHOOK_URL = process.env.XNODE_WEBHOOK_URL;
   PAT = process.env.AZURE_PAT;
@@ -88,6 +99,23 @@ export class XnodesService {
     //    - Tell fort to launch or whatever with services json.
     //  - Otherwise:
     //    - Find appropriate provider.
+
+    // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Friday.
+    const whitelist = [
+      "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5",
+      "0x99acBe5d487421cbd63bBa3673132E634a6b4720",
+      "0x7703d5753C54852D4249F9784A3e8A6eeA08e1dD",
+    ]
+    let isWhitelisted = false
+    for (let i = 0; i < whitelist.length; i++) {
+      if (user.web3Address == whitelist) {
+        isWhitelisted = true
+      }
+    }
+
+    if (!isWhitelisted) {
+      throw new Error("Not whitelisted, stay posted on our social media for the official launch.");
+    }
 
     console.log('Final services:');
     console.log(services);
@@ -126,7 +154,7 @@ export class XnodesService {
       // web3.eth.getBalance(xnode.walletAddress) // STUB
 
       // Talk to the unit controller API.
-      let controller_url = `https://xu-controller.railway.internal/v1/`; // make this an env variable
+      let controller_url = this.XU_CONTROLLER_URL; // make this an env variable
       let headers: Headers = new Headers();
       // headers.set("Authorization", "Bearer " + xnodeAccessToken)
       let jsondata = JSON.stringify({

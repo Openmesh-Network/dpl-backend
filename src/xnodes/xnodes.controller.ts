@@ -110,7 +110,7 @@ export class XnodesController {
   @ApiOperation({
     summary: 'Store xnode signing message',
     description:
-      'If it is a validator, we request the user to sign a message with its wallet so we can now which wallet we are going to mint tokens of staking - the message signed here is: "I want to participate in the Validator beta"',
+      'If it is a validator, we request the user to sign a message with its wallet so we can know which wallet we are going to mint tokens of staking - the message signed here is: "I want to participate in the Validator beta"',
   })
   @ApiHeader({
     name: 'x-deeeplink-team-signature',
