@@ -99,7 +99,7 @@ export class XnodesService {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
       for (let i = 0; i < 64; i++) {
-        xnodeAccessToken += chars[Math.floor(Math.random() * 61)]
+        xnodeAccessToken += chars[Math.floor(Math.random() * 61)]; // Not cryptographically secure for access token generation
       }
     }
 
@@ -119,12 +119,44 @@ export class XnodesService {
     // await this.getXnodeDeploymentLog(uuid, xnode.id);
 
     if (dataNode.isUnit) {
-      // Calls API here!
-    } else {
-      // Check API key against VPSs.
-       
-      console.log('Hardcoded deployment for Hivelocity')
-    }
+      xnode.apiKey = "isUnit";
+
+      // TODO (Harsh): Check that xnode.nftId is valid here!
+
+      // Does Xnode Unit token ownership validation prior to any action on that Xnode Unit.
+      // web3.eth.getBalance(xnode.walletAddress) // STUB
+
+      // Talk to the unit controller API.
+      let controller_url = `https://xu-controller.railway.internal/v1/`; // make this an env variable
+      let headers: Headers = new Headers();
+      // headers.set("Authorization", "Bearer " + xnodeAccessToken)
+      let jsondata = JSON.stringify({
+        // get the walletAddress for the user from prisma
+        WalletAddress: user.walletAddress,
+        XNODE_UUID: xnode.id,
+        XNODE_ACCESS_TOKEN: xnode.accessToken,
+      });
+      // Attempt provisioning (should only be done once) XXX
+      const provision_request: RequestInfo = new Request(controller_url, {
+        method: `POST`,
+        headers: headers,
+        body: jsondata,
+      });
+      let provision_url = controller_url + "provision/" + xnode.nftId;
+      const response = await fetch(provision_url, provision_request);
+      if (!response.ok) {
+        throw new Error(`Error! status: ${response.status}`);
+      }
+      const provision_unit_response = await response.json();
+      if (provision_unit_response == "Deployed into hivelocity") {
+        xnode.provider = "hivelocity";
+        
+      } else if (provision_unit_response == "Internal server error") {
+        throw new Error(`Unable to provision Xnode Unit`);
+      } else {
+        console.log("Fatal provisioning error.");
+      }
+    } // else: deploy into provider using xnode.apiKey
 
     return xnode;
   }
@@ -175,7 +207,7 @@ export class XnodesService {
       });
     }
   }
-
+  // XXX: Can get information from node_information/<xnode-unit-token-id>
   //since the azure pipeline does not have a websocket to connect to see when the deployment is ready, we need to call the api every 2 seconds to see if the deploy was successfull
   async getXnodeDeploymentLog(tagId: any, xnodeId) {
     return new Promise<void>(async (resolve, reject) => {
