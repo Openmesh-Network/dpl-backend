@@ -102,6 +102,8 @@ export class XnodesService {
     // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Friday.
     const whitelist = [
       "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5",
+      "0x99acBe5d487421cbd63bBa3673132E634a6b4720",
+      "0x7703d5753C54852D4249F9784A3e8A6eeA08e1dD",
     ]
     console.log("Address: ", user.web3Address)
     let isWhitelisted = false
