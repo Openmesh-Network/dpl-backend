@@ -105,10 +105,13 @@ export class XnodesService {
       "0x99acBe5d487421cbd63bBa3673132E634a6b4720",
       "0x7703d5753C54852D4249F9784A3e8A6eeA08e1dD",
     ]
+
     console.log("Address: ", user.web3Address)
     let isWhitelisted = false
     for (let i = 0; i < whitelist.length; i++) {
-      if (user.web3Address == whitelist) {
+      console.log("Address: ", user.web3Address, whitelist[i])
+      console.log("Address: ", user.web3Address)
+      if (user.web3Address == whitelist[i]) {
         isWhitelisted = true
       }
     }
@@ -132,6 +135,7 @@ export class XnodesService {
     }
 
     console.log("Adding Xnode to database")
+
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
@@ -166,7 +170,8 @@ export class XnodesService {
       // web3.eth.getBalance(xnode.walletAddress) // STUB
 
       // Talk to the unit controller API.
-      let controller_url = `https://xu-controller.railway.internal/v1/`; // make this an env variable
+
+      let controller_url = `http://localhost:5000/v1/`; // make this an env variable
       let headers: Headers = new Headers();
       // headers.set("Authorization", "Bearer " + xnodeAccessToken)
       let jsondata = JSON.stringify({
@@ -182,18 +187,19 @@ export class XnodesService {
         body: jsondata,
       });
       let provision_url = controller_url + "provision/" + xnode.nftId;
-      const response = await fetch(provision_url, provision_request);
-      if (!response.ok) {
-        throw new Error(`Error! status: ${response.status}`);
-      }
-      const provision_unit_response = await response.json();
-      if (provision_unit_response == "Deployed into hivelocity") {
-        xnode.provider = "hivelocity";
-      } else if (provision_unit_response == "Internal server error") {
-        throw new Error(`Unable to provision Xnode Unit`);
-      } else {
-        console.log("Fatal provisioning error.");
-      }
+
+      // const response = await fetch(provision_url, provision_request);
+      // if (!response.ok) {
+      //   throw new Error(`Error! status: ${response.status}`);
+      // }
+      // const provision_unit_response = await response.json();
+      // if (provision_unit_response == "Deployed into hivelocity") {
+      //   xnode.provider = "hivelocity";
+      // } else if (provision_unit_response == "Internal server error") {
+      //   throw new Error(`Unable to provision Xnode Unit`);
+      // } else {
+      //   console.log("Fatal provisioning error.");
+      // }
     } // else: deploy into provider using xnode.apiKey
 
     return xnode;
