@@ -86,6 +86,8 @@ export class XnodesService {
       });
     }
 
+    console.log(dataBody)
+
     const { services, ...dataNode } =
       dataBody;
 
