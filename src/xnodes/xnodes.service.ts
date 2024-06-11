@@ -37,6 +37,7 @@ import {
   StoreXnodeSigningMessageDataDTO,
   UpdateXnodeDto,
 } from './dto/xnodes.dto';
+import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
 import { features } from 'process';
 import {
   defaultSourcePayload,
@@ -52,7 +53,14 @@ export class XnodesService {
     private readonly utilsService: UtilsService,
     private readonly openmeshExpertsAuthService: OpenmeshExpertsAuthService,
   ) {}
-
+  web3UrlProvider = process.env.WEB3_URL_PROVIDER;
+  web3Provider = new ethers.providers.JsonRpcProvider(this.web3UrlProvider);
+  XUContractAddr = process.env.XU_NFT_CONTRACT_ADDRESS;
+  XuContractConnect= new ethers.Contract(
+    this.XUContractAddr,
+    JSON.stringify(XnodeUnitContract),
+    this.web3Provider,
+  );
   SECRET = process.env.XNODE_SECRET;
   WEBHOOK_URL = process.env.XNODE_WEBHOOK_URL;
   PAT = process.env.AZURE_PAT;
@@ -122,7 +130,10 @@ export class XnodesService {
       xnode.apiKey = "isUnit";
 
       // TODO (Harsh): Check that xnode.nftId is valid here!
-
+      let nftOwner  = this.XuContractConnect.eth.ownerOf(xnode.nftId) // STUB
+      if(nftOwner != user.web3Address){
+        throw new Error(`You don't own the NFT`);
+      }
       // Does Xnode Unit token ownership validation prior to any action on that Xnode Unit.
       // web3.eth.getBalance(xnode.walletAddress) // STUB
 
