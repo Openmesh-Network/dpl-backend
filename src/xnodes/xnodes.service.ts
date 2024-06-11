@@ -97,6 +97,21 @@ export class XnodesService {
     //  - Otherwise:
     //    - Find appropriate provider.
 
+    // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Friday.
+    const whitelist = [
+      "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5",
+    ]
+    let isWhitelisted = false
+    for (let i = 0; i < whitelist.length; i++) {
+      if (user.web3Address == whitelist) {
+        isWhitelisted = true
+      }
+    }
+
+    if (!isWhitelisted) {
+      throw new Error("Not whitelisted, stay posted on our social media for the official launch.");
+    }
+
     console.log('Final services:');
     console.log(services);
 
