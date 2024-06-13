@@ -262,7 +262,7 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.getXnodes(req);
   }
-
+  /*
   @ApiOperation({
     summary: 'Returns all user xnodes',
   })
@@ -290,7 +290,7 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.testingService.createWallet(data.name, data.senha);
   }
-
+  */
   // @ApiOperation({
   //   summary: 'deleteTable',
   // })

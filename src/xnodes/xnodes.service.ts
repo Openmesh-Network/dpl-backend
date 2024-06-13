@@ -66,7 +66,7 @@ export class XnodesService {
   // TODO Clean up redundant variables from deprecated deployment architecture
   SECRET = process.env.XNODE_SECRET;
   WEBHOOK_URL = process.env.XNODE_WEBHOOK_URL;
-  PAT = process.env.AZURE_PAT;
+  //PAT = process.env.AZURE_PAT;
 
   async createXnode(dataBody: CreateXnodeDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
@@ -234,8 +234,10 @@ export class XnodesService {
       });
     }
   }
-  // XXX: Can get information from node_information/<xnode-unit-token-id>
+  // TODO: Can get information from node_information/<xnode-unit-token-id>
   //since the azure pipeline does not have a websocket to connect to see when the deployment is ready, we need to call the api every 2 seconds to see if the deploy was successfull
+  
+  /* DEPRECATED
   async getXnodeDeploymentLog(tagId: any, xnodeId) {
     return new Promise<void>(async (resolve, reject) => {
       const encodedCredentials = Buffer.from(`user:${this.PAT}`).toString(
@@ -331,7 +333,7 @@ export class XnodesService {
 
       interval = setInterval(fetchLogs, 20000);
     });
-  }
+  } */
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
