@@ -1,4 +1,0 @@
--- AlterTable
-ALTER TABLE "xnode" ALTER COLUMN "consoleEdges" DROP NOT NULL,
-ALTER COLUMN "consoleEdges" DROP DEFAULT,
-ALTER COLUMN "consoleEdges" SET DATA TYPE TEXT;

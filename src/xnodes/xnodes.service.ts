@@ -37,6 +37,7 @@ import {
   StoreXnodeSigningMessageDataDTO,
   UpdateXnodeDto,
 } from './dto/xnodes.dto';
+import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
 import { features } from 'process';
 import {
   defaultSourcePayload,
@@ -130,6 +131,7 @@ export class XnodesService {
         xnodeAccessToken += chars[Math.floor(Math.random() * 61)]; // Not cryptographically secure for access token generation
       }
     }
+
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
@@ -147,9 +149,12 @@ export class XnodesService {
 
     if (dataNode.isUnit) {
       xnode.apiKey = "isUnit";
-      let xnodeUnit_tokenId = 0; // Selected from UI based on available XU in wallet.
-      const xnode_unit_token_id = String(xnodeUnit_tokenId);
 
+      // TODO (Harsh): Check that xnode.nftId is valid here!
+      let nftOwner  = this.XuContractConnect.eth.ownerOf(xnode.nftId) // STUB
+      if(nftOwner != user.web3Address){
+        throw new Error(`You don't own the NFT`);
+      }
       // Does Xnode Unit token ownership validation prior to any action on that Xnode Unit.
       // web3.eth.getBalance(xnode.walletAddress) // STUB
 
@@ -169,7 +174,7 @@ export class XnodesService {
         headers: headers,
         body: jsondata,
       });
-      let provision_url = controller_url + "provision/" + xnode_unit_token_id;
+      let provision_url = controller_url + "provision/" + xnode.nftId;
       const response = await fetch(provision_url, provision_request);
       if (!response.ok) {
         throw new Error(`Error! status: ${response.status}`);

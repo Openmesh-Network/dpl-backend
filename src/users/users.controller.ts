@@ -63,7 +63,7 @@ export class UsersController {
 
   // Returns a specific task:
   @ApiOperation({
-    summary: 'Edits an user profile',
+    summary: 'Edits a user profile',
     description:
       'To edit a user profile, its mandatory to check if the data to change the profile was signed by the user (message signing) to assure that its the user who wants to change its profile.We create a hash with the data the user sent, the updatesNonce from the user and verifies if the signed messages matches the hash (with the address of the signer)',
   })

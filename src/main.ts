@@ -34,11 +34,12 @@ async function bootstrap() {
   SwaggerModule.setup('api-docs', app, document);
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-  app.enableCors({
-    origin: '*', // substitua pelo porto correto do seu app Next.js
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-  });
+  app.enableCors()
+  // app.enableCors({
+  //   origin: '*', // substitua pelo porto correto do seu app Next.js
+  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  //   credentials: true,
+  // });
 
   await app.listen(process.env.PORT || 3003 || 443);
 }
