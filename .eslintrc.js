@@ -9,6 +9,11 @@ module.exports = {
   extends: [
     'plugin:@typescript-eslint/recommended',
     'plugin:prettier/recommended',
+    'plugin:security/recommended-legacy',
+    "plugin:security/recommended",
+    "plugin:xss/recommended",
+    "plugin:no-unsanitized/recommended-legacy",
+    "plugin:pii/recommended",
   ],
   root: true,
   env: {

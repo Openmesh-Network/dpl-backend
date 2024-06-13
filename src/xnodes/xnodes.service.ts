@@ -64,11 +64,6 @@ export class XnodesService {
   XU_CONTROLLER_URL = process.env.XU_CONTROLLER_URL;
   XU_CONTROLLER_KEY = process.env.XU_CONTROLLER_KEY;
 
-  // TODO Clean up redundant variables from deprecated deployment architecture
-  SECRET = process.env.XNODE_SECRET;
-  WEBHOOK_URL = process.env.XNODE_WEBHOOK_URL;
-  //PAT = process.env.AZURE_PAT;
-
   async createXnode(dataBody: CreateXnodeDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
@@ -90,8 +85,7 @@ export class XnodesService {
       });
     }
 
-    const { services, ...dataNode } =
-      dataBody;
+    const { services, ...dataNode } = dataBody;
 
     // TODO:
     //  - Check what kind of Xnode we're provisioning.
@@ -101,19 +95,19 @@ export class XnodesService {
     //  - Otherwise:
     //    - Find appropriate provider.
 
-    // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Friday.
+    // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Wednesday.
     const whitelist = [
-      "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5",
-      "0x99acBe5d487421cbd63bBa3673132E634a6b4720",
-      "0x7703d5753C54852D4249F9784A3e8A6eeA08e1dD",
-    ]
-    let isWhitelisted = false
-    for (let i = 0; i < whitelist.length; i++) {
-      if (user.web3Address == whitelist) {
-        isWhitelisted = true
+      `0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5`,
+      `0x99acBe5d487421cbd63bBa3673132E634a6b4720`,
+      `0x7703d5753C54852D4249F9784A3e8A6eeA08e1dD`,
+      `0xA4a336783326241acFf520D91eb8841Ad3B9BD1a`,
+    ];
+    let isWhitelisted = false;
+    for (let address of whitelist) {
+      if (user.web3Address == address) {
+        isWhitelisted = true;
       }
     }
-
     if (!isWhitelisted) {
       throw new Error("Not whitelisted, stay posted on our social media for the official launch.");
     }
@@ -124,7 +118,8 @@ export class XnodesService {
     // Note(Tom): This token is for the admin service on the Xnode to identify itself for read requests/heartbeats.
     // Will be replaced with PKI at some point.
     let xnodeAccessToken = ""
-    { // Make the access token.
+    {
+      // Make the access token.
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
       for (let i = 0; i < 64; i++) {
@@ -135,33 +130,29 @@ export class XnodesService {
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
-        services: services,
+        id: generateUUID16(),
         accessToken: xnodeAccessToken,
         openmeshExpertUserId: user.id,
+        isUnit: dataNode.isUnit,
+        deployment_auth: dataNode.deployment_auth,
         ...dataNode,
       },
     });
 
     console.log('went through it');
 
-    // XXX: Do I need to reimplement this?
-    // await this.getXnodeDeploymentLog(uuid, xnode.id);
-
-    if (dataNode.isUnit) {
-      xnode.apiKey = "isUnit";
-
+    if (xnode.isUnit) {
       // TODO (Harsh): Check that xnode.nftId is valid here!
-      let nftOwner  = this.XuContractConnect.eth.ownerOf(xnode.nftId) // STUB
-      if(nftOwner != user.web3Address){
+      // TODO: Input filtering on deployment_auth, eg. Must be Hexadecimal / uint256
+      let nftOwner = this.XuContractConnect.eth.ownerOf(xnode.deployment_auth); // STUB
+      if(nftOwner != user.walletAddress) {
         throw new Error(`You don't own the NFT`);
       }
-      // Does Xnode Unit token ownership validation prior to any action on that Xnode Unit.
-      // web3.eth.getBalance(xnode.walletAddress) // STUB
 
       // Talk to the unit controller API.
       let controller_url = this.XU_CONTROLLER_URL; // make this an env variable
       let headers: Headers = new Headers();
-      // headers.set("Authorization", "Bearer " + xnodeAccessToken)
+      headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
       let jsondata = JSON.stringify({
         // get the walletAddress for the user from prisma
         WalletAddress: user.walletAddress,
@@ -174,7 +165,7 @@ export class XnodesService {
         headers: headers,
         body: jsondata,
       });
-      let provision_url = controller_url + "provision/" + xnode.nftId;
+      let provision_url = controller_url + "provision/" + xnode.deployment_auth;
       const response = await fetch(provision_url, provision_request);
       if (!response.ok) {
         throw new Error(`Error! status: ${response.status}`);
@@ -188,7 +179,10 @@ export class XnodesService {
       } else {
         console.log("Fatal provisioning error.");
       }
-    } // else: deploy into provider using xnode.apiKey
+
+    } else { // !dataNode.isUnit
+      // Deploy into a provider
+    }
 
     return xnode;
   }
@@ -212,7 +206,7 @@ export class XnodesService {
   }
 
   async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const accessToken = String(req.headers['x-parse-session-token']); // Rename session token to avoid confusion with browser sessions
 
     const { id, ...data} = dataBody;
 
@@ -240,105 +234,9 @@ export class XnodesService {
     }
   }
   // TODO: Can get information from node_information/<xnode-unit-token-id>
-  //since the azure pipeline does not have a websocket to connect to see when the deployment is ready, we need to call the api every 2 seconds to see if the deploy was successfull
-  
-  /* DEPRECATED
-  async getXnodeDeploymentLog(tagId: any, xnodeId) {
-    return new Promise<void>(async (resolve, reject) => {
-      const encodedCredentials = Buffer.from(`user:${this.PAT}`).toString(
-        'base64',
-      );
-
-      let interval: NodeJS.Timeout; // Variável para armazenar o intervalo
-
-      const fetchBuildId = async () => {
-        try {
-          const response = await axios.get(
-            `https://dev.azure.com/gdafund/L3/_apis/build/builds?tagFilters=${tagId}`,
-            {
-              headers: {
-                Authorization: `Basic ${encodedCredentials}`,
-              },
-            },
-          );
-          console.log('getting data build');
-
-          if (response.data?.value.length > 0) {
-            const buildId = response.data.value[0].id;
-            console.log('found build');
-            console.log(buildId);
-            await this.prisma.xnode.update({
-              where: {
-                id: xnodeId,
-              },
-              data: {
-                buildId: JSON.stringify(buildId),
-              },
-            });
-            this.getBuildLogs(buildId, xnodeId);
-            clearInterval(interval); // Limpa o intervalo quando a condição de sucesso for atendida
-            resolve(); // Resolve a promessa
-          }
-        } catch (error) {
-          console.error('error getting build:', error);
-          clearInterval(interval); // Limpa o intervalo em caso de erro
-          reject(error); // Rejeita a promessa
-        }
-      };
-
-      await fetchBuildId();
-
-      interval = setInterval(fetchBuildId, 10000); // Configura o intervalo
-    });
-  }
-
-  async getBuildLogs(buildId: string, xnodeId: string): Promise<void> {
-    return new Promise<void>(async (resolve, reject) => {
-      const encodedCredentials = Buffer.from(`user:${this.PAT}`).toString(
-        'base64',
-      );
-
-      let interval: NodeJS.Timeout;
-
-      const fetchLogs = async () => {
-        try {
-          const response = await axios.get(
-            `https://dev.azure.com/gdafund/L3/_apis/build/builds/${buildId}/logs?api-version=7.1-preview.2`,
-            {
-              headers: {
-                Authorization: `Basic ${encodedCredentials}`,
-              },
-            },
-          );
-
-          if (response.data?.value) {
-            console.log('the response data');
-            if (response.data.value.some((log: any) => log.id > 31)) {
-              console.log('YES LOG DONE');
-              await this.prisma.xnode.update({
-                where: {
-                  id: xnodeId,
-                },
-                data: {
-                  status: 'Running',
-                },
-              });
-              clearInterval(interval);
-              resolve(); // Resolve a promessa quando a condição é atendida
-            }
-          }
-        } catch (error) {
-          console.error('Erro ao buscar os logs:', error);
-          clearInterval(interval);
-          reject(error); // Rejeita a promessa em caso de erro
-        }
-      };
-
-      await fetchLogs();
-
-      interval = setInterval(fetchLogs, 20000);
-    });
-  } */
+  //async fetch_unit_information(deployment: ) {
+    // STUB
+  //}
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
@@ -443,7 +341,7 @@ export class XnodesService {
       nodes: nodesListing,
     };
   }
-
+  /*
   async storeXnodeData(data: StoreXnodeData) {
     console.log('the log data');
 
@@ -474,7 +372,7 @@ export class XnodesService {
         ...finalData,
       },
     });
-  }
+  } */
 
   async storeXnodeSigningMessage(
     dataBody: StoreXnodeSigningMessageDataDTO,

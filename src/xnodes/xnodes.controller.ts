@@ -26,7 +26,6 @@ import { Request } from 'express';
 
 import { XnodesService } from './xnodes.service';
 import {
-  ConnectAPI,
   CreateXnodeDto,
   GetXnodeDto,
   XnodeHeartbeatDto,
@@ -63,7 +62,7 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Create a xnode',
+    summary: 'Push xnode heartbeat including resource metrics',
   })
   @Post('pushXnodeHeartbeat')
   pushXnodeHeartbeat(@Body() data: XnodeHeartbeatDto, @Req() req: Request) {
@@ -77,7 +76,7 @@ export class XnodesController {
   getXnodeServices(@Body() data: GetXnodeServiceDto, @Req() req: Request) {
     return this.xnodesService.getXnodeServices(data, req);
   }
-
+/*
   @ApiOperation({
     summary: 'Store xnode information',
   })
@@ -94,7 +93,7 @@ export class XnodesController {
       throw new UnauthorizedException();
     return this.xnodesService.storeXnodeData(data);
   }
-
+*/
   @ApiOperation({
     summary: 'Store xnode signing message',
     description:
@@ -113,7 +112,7 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.storeXnodeSigningMessage(data, req);
   }
-
+/*
   @ApiOperation({
     summary: 'Connects and store the user equinix api key',
   })
@@ -176,7 +175,7 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.connectValidationCloudAPIEthereum(data, req);
   }
-
+*/
   @ApiOperation({
     summary: 'Update a xnode',
   })
