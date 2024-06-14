@@ -24,7 +24,6 @@ import {
   UploadDatasetsDTO,
 } from './dto/openmesh-data.dto';
 import { GetTemplatesDTO } from './dto/openmesh-template-products.dto';
-import { GetDTO } from 'src/pythia/dto/pythia.dto';
 
 //This service is utilized to update all the governance workflow - it runs a query trhough all the events from the contracts governance to update it (its util to some cases in which the backend may have losed some events caused by a downtime or something similar)
 @Injectable()

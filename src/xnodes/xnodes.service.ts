@@ -17,10 +17,11 @@ import * as erc20ContractABI from '../contracts/erc20ContractABI.json';
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
 
-import Hex from 'crypto-js/enc-hex';
-import hmacSHA1 from 'crypto-js/hmac-sha1';
-import { createHmac } from 'crypto';
-import cloneDeep from 'lodash/cloneDeep';
+import {
+  KeyObject,
+  createHmac,
+  createSecretKey
+} from 'crypto' // NodeJS native crypto lib
 
 import { PrismaService } from '../database/prisma.service';
 import { Request, response } from 'express';
@@ -65,9 +66,9 @@ export class XnodesService {
   XU_CONTROLLER_KEY = process.env.XU_CONTROLLER_KEY;
 
   async createXnode(dataBody: CreateXnodeDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
+      sessionToken,
     );
 
     const deployments = await this.prisma.deployment.findMany({
@@ -81,21 +82,14 @@ export class XnodesService {
     if (deployments.length > 100) {
       throw new BadRequestException('Xnode limit reached', {
         cause: new Error(),
-        description: 'Xnode limit reached',
+        description: 'Xnode deployment limit of 100 reached',
       });
     }
+    // INPUT VALIDATION, dataBody is XnodeDto
+    
+    const { services, ...dataNode } = dataBody; 
 
-    const { services, ...dataNode } = dataBody;
-
-    // TODO:
-    //  - Check what kind of Xnode we're provisioning.
-    //  - If unit:
-    //    - Check NFT validity with Fort API.
-    //    - Tell fort to launch or whatever with services json.
-    //  - Otherwise:
-    //    - Find appropriate provider.
-
-    // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Wednesday.
+    // A whitelist of addresses for testing, want to be safe and make sure only people we trust can run before the official launch on Wednesday.
     const whitelist = [
       `0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5`,
       `0x99acBe5d487421cbd63bBa3673132E634a6b4720`,
@@ -115,17 +109,14 @@ export class XnodesService {
     console.log('Final services:');
     console.log(services);
 
-    // Note(Tom): This token is for the admin service on the Xnode to identify itself for read requests/heartbeats.
-    // Will be replaced with PKI at some point.
-    let xnodeAccessToken = ""
-    {
-      // Make the access token.
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-      for (let i = 0; i < 64; i++) {
-        xnodeAccessToken += chars[Math.floor(Math.random() * 61)]; // Not cryptographically secure for access token generation
-      }
-    }
+    // This token is for the admin service on the Xnode to identify itself for read requests/heartbeats.
+    // Will be replaced with PSK + HMAC at some point.
+    let xnodePresharedKey: KeyObject;
+    require('crypto').randomBytes(64, function(err, buffer) {
+      let randomBytes = buffer.toString('hex');
+      xnodePresharedKey = createSecretKey(randomBytes, 'hex');
+    }); // TODO: handle err
+    let xnodeAccessToken = xnodePresharedKey.export().toString();
 
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
@@ -134,20 +125,21 @@ export class XnodesService {
         accessToken: xnodeAccessToken,
         openmeshExpertUserId: user.id,
         isUnit: dataNode.isUnit,
-        deployment_auth: dataNode.deployment_auth,
+        deployment_auth: dataNode.deployment_auth, // INPUT VALIDATION BEFORE WRITE TO DB!
         ...dataNode,
       },
     });
 
-    console.log('went through it');
+    console.log('Added Xnode to the database');
 
     if (xnode.isUnit) {
       // TODO (Harsh): Check that xnode.nftId is valid here!
-      // TODO: Input filtering on deployment_auth, eg. Must be Hexadecimal / uint256
       let nftOwner = this.XuContractConnect.eth.ownerOf(xnode.deployment_auth); // STUB
       if(nftOwner != user.walletAddress) {
         throw new Error(`You don't own the NFT`);
       }
+      // TODO: Input filtering on deployment_auth, eg. Must be Hexadecimal / uint256
+      let tokenId = xnode.deployment_auth // SSRF Vulnerability
 
       // Talk to the unit controller API.
       let controller_url = this.XU_CONTROLLER_URL; // make this an env variable
@@ -165,30 +157,31 @@ export class XnodesService {
         headers: headers,
         body: jsondata,
       });
-      let provision_url = controller_url + "provision/" + xnode.deployment_auth;
+      let provision_url = controller_url + "provision/" + tokenId;
       const response = await fetch(provision_url, provision_request);
       if (!response.ok) {
         throw new Error(`Error! status: ${response.status}`);
       }
       const provision_unit_response = await response.json();
       if (provision_unit_response == "Deployed into hivelocity") {
-        xnode.provider = "hivelocity";
+        xnode.provider = "hivelocity"; // Why?
         
       } else if (provision_unit_response == "Internal server error") {
         throw new Error(`Unable to provision Xnode Unit`);
       } else {
         console.log("Fatal provisioning error.");
       }
+      console.log("Xnode deployed");
 
     } else { // !dataNode.isUnit
-      // Deploy into a provider
+      // Deploy into a provider via api proxy?
     }
 
     return xnode;
   }
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const accessToken = String(req.headers['x-parse-session-token']); // Does not make sense, access token = session token?
     const node = await this.prisma.deployment.findFirst({
       where: {
         AND: [
@@ -196,6 +189,7 @@ export class XnodesService {
             id: dataBody.id,
           },
           {
+            // Hmac validation
             accessToken: accessToken
           }
         ]
@@ -218,6 +212,7 @@ export class XnodesService {
               id: id,
             },
             {
+            // Hmac validation              
               accessToken: accessToken
             }
           ]
@@ -748,9 +743,4 @@ export class XnodesService {
 
     return { message: 'CSV file created', filePath };
   }
-
-  // async deleteTable() {
-  //   await this.prisma.$queryRaw`DROP EXTENSION timescaledb;`;
-  //   console.log('Tabela "chunk" excluída com sucesso.');
-  // }
 }

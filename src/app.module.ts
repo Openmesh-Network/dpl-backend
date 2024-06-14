@@ -10,7 +10,6 @@ import { OpenmeshExpertsModule } from './openmesh-experts/openmesh-experts.modul
 import { OpenmeshDataModule } from './openmesh-data/openmesh-data.module';
 import { XnodesModule } from './xnodes/xnodes.module';
 import { JobsModule } from './jobs/jobs.module';
-import { PythiaModule } from './pythia/pythia.module';
 
 @Module({
   imports: [
@@ -20,7 +19,6 @@ import { PythiaModule } from './pythia/pythia.module';
     XnodesModule,
     OpenmeshExpertsModule,
     OpenmeshDataModule,
-    PythiaModule,
     UtilsModule,
     EventsHandlerModule,
     JobsModule,

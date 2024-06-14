@@ -695,7 +695,7 @@ model Xnode {
 // Maybe rename to Xnode_Deployment to avoid confusion
 model Deployment {
   id String @id @default(uuid())
-  accessToken   String // PSK
+  accessToken   String // Preshared Key
   provider      String?
   services      String? // should be named config or similar. Will eventually become config_remote (git remote url)
   heartbeatData String?

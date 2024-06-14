@@ -76,24 +76,7 @@ export class XnodesController {
   getXnodeServices(@Body() data: GetXnodeServiceDto, @Req() req: Request) {
     return this.xnodesService.getXnodeServices(data, req);
   }
-/*
-  @ApiOperation({
-    summary: 'Store xnode information',
-  })
-  @ApiHeader({
-    name: 'x-deeeplink-team-signature',
-    description: 'Private token to auth',
-  })
-  @Post('storeXnodeData')
-  storeXnodeData(@Body() data: StoreXnodeData, @Req() req: Request) {
-    if (
-      String(req.headers['x-deeeplink-team-signature']) !==
-      this.deeplinkSignature
-    )
-      throw new UnauthorizedException();
-    return this.xnodesService.storeXnodeData(data);
-  }
-*/
+
   @ApiOperation({
     summary: 'Store xnode signing message',
     description:
@@ -112,70 +95,7 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.storeXnodeSigningMessage(data, req);
   }
-/*
-  @ApiOperation({
-    summary: 'Connects and store the user equinix api key',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('connectEquinixAPI')
-  connectEquinixAPI(@Body() data: ConnectAPI, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.connectEquinixAPI(data, req);
-  }
-  @ApiOperation({
-    summary:
-      'Connects and store the user aiven api key - https://api.aiven.io/v1/project',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('connectAivenAPI')
-  connectAivenAPI(@Body() data: ConnectAPI, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.connectAivenAPI(data, req);
-  }
 
-  @ApiOperation({
-    summary: 'Connects and store the user valcloud api key - polygon',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('connectValidationCloudAPIPolygon')
-  connectValidationCloudAPIPolygon(
-    @Body() data: ConnectAPI,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.connectValidationCloudAPIPolygon(data, req);
-  }
-
-  // testing ci cd railway
-  @ApiOperation({
-    summary: 'Connects and store the user valcloud api key - eth',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('connectValidationCloudAPIEthereum')
-  connectValidationCloudAPIEthereum(
-    @Body() data: ConnectAPI,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.connectValidationCloudAPIEthereum(data, req);
-  }
-*/
   @ApiOperation({
     summary: 'Update a xnode',
   })
@@ -276,17 +196,5 @@ export class XnodesController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.testingService.createWallet(data.name, data.senha);
-  }
-  */
-  // @ApiOperation({
-  //   summary: 'deleteTable',
-  // })
-  // @ApiHeader({
-  //   name: 'X-Parse-Application-Id',
-  //   description: 'Token mandatory to connect with the app',
-  // })
-  // @Post('deleteTable')
-  // deleteTable() {
-  //   return this.xnodesService.deleteTable();
-  // }
+  } */
 }

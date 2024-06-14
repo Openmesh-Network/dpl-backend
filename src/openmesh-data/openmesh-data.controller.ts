@@ -32,7 +32,6 @@ import {
 } from './dto/openmesh-data.dto';
 import { GetTemplatesDTO } from './dto/openmesh-template-products.dto';
 import { OpenmeshTemplateService } from './openmesh-template-products.service';
-import { GetDTO } from 'src/pythia/dto/pythia.dto';
 import { DomuService } from './domu.service';
 
 @ApiTags('Data products')
@@ -153,7 +152,7 @@ export class OpenmeshDataController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshTemplateProducts.getTemplatesData();
   }
-
+/*
   @ApiOperation({
     summary: 'Return the template data',
   })
@@ -167,7 +166,7 @@ export class OpenmeshDataController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshTemplateProducts.getTemplateData(data);
   }
-
+*/
   @ApiOperation({
     summary: 'Return the template data',
   })
