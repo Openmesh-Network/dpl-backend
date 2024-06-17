@@ -51,7 +51,7 @@ import { generateUUID8, generateUUID16 } from './utils/uuidGenerator';
 export class XnodesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly utilsService: UtilsService,
+    // private readonly utilsService: UtilsService, Unused
     private readonly openmeshExpertsAuthService: OpenmeshExpertsAuthService,
   ) {}
   web3UrlProvider = process.env.WEB3_URL_PROVIDER;
@@ -115,7 +115,7 @@ export class XnodesService {
     require('crypto').randomBytes(64, function(err, buffer) {
       let randomBytes = buffer.toString('hex');
       xnodePresharedKey = createSecretKey(randomBytes, 'hex');
-    }); // TODO: handle err
+    }); // TODO: handle err on creation of key
     let xnodeAccessToken = xnodePresharedKey.export().toString();
 
     // Add the xnode deployment to our database.
@@ -133,15 +133,21 @@ export class XnodesService {
     console.log('Added Xnode to the database');
 
     if (xnode.isUnit) {
+      // XXX: Further testing is required.
       // TODO (Harsh): Check that xnode.nftId is valid here!
       let nftOwner = this.XuContractConnect.eth.ownerOf(xnode.deployment_auth); // STUB
       if(nftOwner != user.walletAddress) {
         throw new Error(`You don't own the NFT`);
       }
-      // TODO: Input filtering on deployment_auth, eg. Must be Hexadecimal / uint256
-      let tokenId = xnode.deployment_auth // SSRF Vulnerability
+      let allowedTokenIdChars = "0123456789" // Must be uint256
+      for (let char of xnode.deployment_auth) {
+        if (!allowedTokenIdChars.includes(char)) {
+          throw new Error(`Invalid NFT TokenId`);
+        }
+      }
+      let tokenId = xnode.deployment_auth
 
-      // Talk to the unit controller API.
+      // Talk to the unit controller API. - Needs refactoring
       let controller_url = this.XU_CONTROLLER_URL; // make this an env variable
       let headers: Headers = new Headers();
       headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
