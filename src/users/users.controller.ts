@@ -115,7 +115,7 @@ export class UsersController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.usersService.githubLogin(data);
   }
-
+/* Doesn't seem to be used in the frotend
   @ApiOperation({
     summary:
       'Alternative endpoint used to register speaks on the calendly for the conference/hackathon - webhook calendly',
@@ -131,5 +131,5 @@ export class UsersController {
     console.log('os headers');
     console.log(req.headers);
     return this.utilsService.calendlyWebhook(data, req);
-  }
+  } */
 }

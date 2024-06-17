@@ -198,7 +198,7 @@ export class UpdatesService {
         JSON.parse(ipfsRes['applications']),
       );
       if (task['description']) {
-        console.log('checking potencial links spam');
+        console.log('checking links for potential spam');
         this.utilsService.hasLink(task['description'], String(task['id']));
       }
       //   await this.applicationsFromTask(task['id']);
