@@ -186,7 +186,7 @@ export class XnodesService {
         headers: headers,
         body: jsondata,
       });
-      let provision_url = controller_url + "provision/" + xnode.nftId;
+      // let provision_url = controller_url + "provision/" + xnode.nftId;
 
       // const response = await fetch(provision_url, provision_request);
       // if (!response.ok) {
