@@ -703,8 +703,11 @@ model Deployment {
   description   String?
   location      String?
 
-  isUnit        Boolean
-  deployment_auth String // Either their apiKey or the unit's nftTokenId
+  ipAddress      String // Ip address of the provisioned machine
+  deploymentAuth String // Either their apiKey or the unit's nftTokenId
+
+  isUnit         Boolean
+  unitClaimTime  DateTime? // Tracks when the unit was minted
 
   openmeshExpertUserId  String
   openmeshExpertUser    OpenmeshExpertUser @relation(fields: [openmeshExpertUserId], references: [id])
