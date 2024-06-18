@@ -436,7 +436,7 @@ model OpenmeshExpertUser {
 
   updatesNonce String @default("1") //Nonce that managens everytime a profile signin is done, to control the message signing.
 
-  equinixAPIKey String?
+  equinixAPIKey String? // Need to get rid of all these API keys if possible!
   aivenAPIKey String?
   aivenAPIServiceUriParams String?
   validationCloudAPIKeyEthereum String?
@@ -653,6 +653,7 @@ model RecoverPassword {
 }
 
 // Note(Tom): This is out of date, keeping it here for compatibility/reference.
+// Deprecated, cleanup is required
 model Xnode { 
   id String @id @default(uuid())
 
@@ -691,27 +692,29 @@ model Xnode {
   @@map("xnode")
 }
 
-model Deployment { 
+// Maybe rename to Xnode_Deployment to avoid confusion
+model Deployment {
   id String @id @default(uuid())
-
-  provider      String
-  isUnit        Boolean
-  services      String
+  accessToken   String // Preshared Key
+  provider      String?
+  services      String? // should be named config or similar. Will eventually become config_remote (git remote url)
+  heartbeatData String?
   name          String?
   description   String?
   location      String?
-  apiKey        String?
-  accessToken   String?
-  heartbeatData String?
-  nftId         String
 
-  openmeshExpertUserId String
-  openmeshExpertUser   OpenmeshExpertUser  @relation(fields: [openmeshExpertUserId], references: [id])
-  XnodeClaimActivities XnodeClaimActivities[]
+  ipAddress      String // Ip address of the provisioned machine
+  deploymentAuth String // Either their apiKey or the unit's nftTokenId
 
-  createdAt     DateTime  @default(now())
-  // TODO: Use this to track "heartbeat" of system.
-  updatedAt     DateTime? @updatedAt
+  isUnit         Boolean
+  unitClaimTime  DateTime? // Tracks when the unit was minted
+
+  openmeshExpertUserId  String
+  openmeshExpertUser    OpenmeshExpertUser @relation(fields: [openmeshExpertUserId], references: [id])
+  XnodeClaimActivities  XnodeClaimActivities[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
 
   @@map("deployment")
 }

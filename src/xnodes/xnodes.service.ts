@@ -17,10 +17,11 @@ import * as erc20ContractABI from '../contracts/erc20ContractABI.json';
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
 
-import Hex from 'crypto-js/enc-hex';
-import hmacSHA1 from 'crypto-js/hmac-sha1';
-import { createHmac } from 'crypto';
-import cloneDeep from 'lodash/cloneDeep';
+import {
+  KeyObject,
+  createHmac,
+  createSecretKey
+} from 'crypto' // NodeJS native crypto lib
 
 import { PrismaService } from '../database/prisma.service';
 import { Request, response } from 'express';
@@ -50,25 +51,24 @@ import { generateUUID8, generateUUID16 } from './utils/uuidGenerator';
 export class XnodesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly utilsService: UtilsService,
+    // private readonly utilsService: UtilsService, Unused
     private readonly openmeshExpertsAuthService: OpenmeshExpertsAuthService,
   ) {}
-  web3UrlProvider = process.env.WEB3_URL_PROVIDER;
+  web3UrlProvider = process.env.WEB3_URL_PROVIDER_ETHEREUM;
   web3Provider = new ethers.providers.JsonRpcProvider(this.web3UrlProvider);
   XUContractAddr = process.env.XU_NFT_CONTRACT_ADDRESS;
-  XuContractConnect= new ethers.Contract(
+  XuContractConnect = new ethers.Contract(
     this.XUContractAddr,
     JSON.stringify(XnodeUnitContract),
     this.web3Provider,
   );
-  SECRET = process.env.XNODE_SECRET;
-  WEBHOOK_URL = process.env.XNODE_WEBHOOK_URL;
-  PAT = process.env.AZURE_PAT;
+  XU_CONTROLLER_URL = process.env.XU_CONTROLLER_URL;
+  XU_CONTROLLER_KEY = process.env.XU_CONTROLLER_KEY;
 
   async createXnode(dataBody: CreateXnodeDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
+      sessionToken,
     );
 
     const deployments = await this.prisma.deployment.findMany({
@@ -79,43 +79,34 @@ export class XnodesService {
 
     // XXX: Handle more elegantly? Maybe offer user the chance to delete Xnodes.
     // This actually works OK for now. Just important to note.
-    if (deployments.length > 100) {
+    const MAX_DEPLOYMENTS = 100
+    if (deployments.length > MAX_DEPLOYMENTS) {
       throw new BadRequestException('Xnode limit reached', {
         cause: new Error(),
-        description: 'Xnode limit reached',
+        description: 'Xnode deployment limit of ' + MAX_DEPLOYMENTS + ' reached',
       });
     }
 
-    console.log(dataBody)
+    // INPUT VALIDATION, dataBody is XnodeDto
+    const { services, ...xnodeData } = dataBody; 
 
-    const { services, ...dataNode } =
-      dataBody;
 
-    // TODO:
-    //  - Check what kind of Xnode we're provisioning.
-    //  - If unit:
-    //    - Check NFT validity with Fort API.
-    //    - Tell fort to launch or whatever with services json.
-    //  - Otherwise:
-    //    - Find appropriate provider.
-
-    // A whitelist of addresses for the demo, want to be safe and make sure only people we trust can run before the official launch on Friday.
+    // A whitelist of addresses for testing, want to be safe and make sure only people we trust can run before the official launch on Wednesday.
     const whitelist = [
-      "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5",
-      "0x99acBe5d487421cbd63bBa3673132E634a6b4720",
-      "0x7703d5753C54852D4249F9784A3e8A6eeA08e1dD",
-    ]
+      `0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5`,
+      `0x99acBe5d487421cbd63bBa3673132E634a6b4720`,
+      `0x7703d5753c54852d4249f9784a3e8a6eea08e1dd`,
+      `0xa4a336783326241acff520d91eb8841ad3b9bd1a`,
+    ];
 
-    console.log("Address: ", user.web3Address)
-    let isWhitelisted = false
-    for (let i = 0; i < whitelist.length; i++) {
-      console.log("Address: ", user.web3Address, whitelist[i])
-      console.log("Address: ", user.web3Address)
-      if (user.web3Address == whitelist[i]) {
-        isWhitelisted = true
+    let isWhitelisted = false;
+    for (let address of whitelist) {
+      if (user.web3Address == address) {
+        isWhitelisted = true;
       }
     }
 
+    // XXX: Disable whitelist.
     if (!isWhitelisted) {
       throw new Error("Not whitelisted, stay posted on our social media for the official launch.");
     }
@@ -123,90 +114,165 @@ export class XnodesService {
     console.log('Final services:');
     console.log(services);
 
-    // Note(Tom): This token is for the admin service on the Xnode to identify itself for read requests/heartbeats.
-    // Will be replaced with PKI at some point.
-    let xnodeAccessToken = ""
-    { // Make the access token.
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    // This token is for the admin service on the Xnode to identify itself for read requests/heartbeats.
+    // Will be replaced with PSK + HMAC at some point.
+    let xnodePresharedKey: KeyObject;
+    const buffer = require('crypto').randomBytes(64).toString('hex'); // TODO: handle err on creation of key
+    xnodePresharedKey = createSecretKey(buffer, 'hex')
+    const xnodeAccessToken = xnodePresharedKey.export().toString('base64');
+    const xnodeId = generateUUID16()
 
-      for (let i = 0; i < 64; i++) {
-        xnodeAccessToken += chars[Math.floor(Math.random() * 61)]; // Not cryptographically secure for access token generation
+    if (xnodeData.isUnit) {
+
+      let allowedTokenIdChars = "0123456789" // Must be uint256
+      for (let char of xnodeData.deploymentAuth) {
+        if (!allowedTokenIdChars.includes(char)) {
+          throw new Error(`Invalid NFT TokenId`);
+        }
       }
-    }
 
-    console.log("Adding Xnode to database")
+      let tokenId = BigInt(xnodeData.deploymentAuth)
+      let nftOwner = ""
+      { // Check web3Address owns NFT.
+        try {
+          // XXX: Further testing is required.
+          console.log("Token id: ", tokenId)
+          // TODO: Consider caching these requests. We are charged by usage.
+          nftOwner = await this.XuContractConnect.ownerOf(tokenId)
 
-    // Add the xnode deployment to our database.
-    const xnode = await this.prisma.deployment.create({
-      data: {
-        services: services,
-        accessToken: xnodeAccessToken,
-        openmeshExpertUserId: user.id,
-        ...dataNode,
-      },
-    });
-
-    console.log('went through it');
-
-    // XXX: Do I need to reimplement this?
-    // await this.getXnodeDeploymentLog(uuid, xnode.id);
-
-    if (dataNode.isUnit) {
-      xnode.apiKey = "isUnit";
-
-      // XXX: Re-add this later, removing now for sepola
-      if (!isWhitelisted) {
-        console.log("Not whitelisted")
-        // Check that xnode.nftId is valid here!
-        let nftOwner  = this.XuContractConnect.eth.ownerOf(xnode.nftId) // XXX: STUB
-        if(nftOwner != user.web3Address){
-          throw new Error(`You don't own the NFT`);
+          console.log('Nft owner: ', nftOwner)
+          console.log('Nft owner: ', user.web3Address)
+        } catch (err) {
+          console.error("Code: ", err.code)
+          console.error("Reason: ", err.reason)
+          console.error("Error: ", err)
         }
 
-        throw new Error(`You don't own the NFT`);
+        if(nftOwner != user.web3Address || nftOwner == "") {
+          throw new Error(`You don't own the NFT`);
+        }
       }
 
-      // Does Xnode Unit token ownership validation prior to any action on that Xnode Unit.
-      // web3.eth.getBalance(xnode.walletAddress) // STUB
+      let nftMintDate = undefined
+      console.log("Checking NFT date.")
 
-      // Talk to the unit controller API.
+      // TODO: Consider caching these requests. We are charged by usage.
+      { // Check NFT date.
+        try {
+          // XXX: Not all RPC providers support events.
+          // Works with our ankr API.
+          const filter = this.XuContractConnect.filters.Transfer(null, null, tokenId);
+          const events = await this.XuContractConnect.queryFilter(filter)
 
-      let controller_url = `http://localhost:5000/v1/`; // make this an env variable
-      let headers: Headers = new Headers();
-      // headers.set("Authorization", "Bearer " + xnodeAccessToken)
-      let jsondata = JSON.stringify({
-        // get the walletAddress for the user from prisma
-        WalletAddress: user.walletAddress,
-        XNODE_UUID: xnode.id,
-        XNODE_ACCESS_TOKEN: xnode.accessToken,
+          const mintEvent = events.find(event => event.args.from === ethers.constants.AddressZero)
+
+          if (!mintEvent) {
+            const errString = "This error shouldn't run. This means the NFT has an owner despite it never being minted."
+            console.error(errString)
+            throw new Error(errString)
+          } else {
+            const block = await this.web3Provider.getBlock(mintEvent.blockNumber)
+
+            if (!block) {
+              const errString = "This error shouldn't run. This means the NFT was minted on a non-existent block."
+              console.error(errString)
+              throw new Error(errString)
+            } else {
+              nftMintDate = new Date(1000 * block.timestamp)
+            }
+          }
+        } catch(err) {
+          console.error(err)
+          throw new Error("Error getting NFT date.")
+        }
+      }
+
+      if (!nftMintDate) {
+        throw new Error("No NFT mint date.")
+      }
+
+      console.log("Nft mint date: ", nftMintDate)
+
+      {
+        if (1) {
+          // XXX: Re-enable the xu-controller API code.
+        } else {
+          // Talk to the unit controller API. - Needs refactoring
+          let controller_url = this.XU_CONTROLLER_URL;
+          let headers: Headers = new Headers();
+
+          // TODO: Test this, doesn't look correct:
+          headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
+          let jsondata = JSON.stringify({
+            // get the walletAddress for the user from prisma
+            WalletAddress: user.walletAddress,
+            XNODE_UUID: xnodeId,
+            XNODE_ACCESS_TOKEN: xnodeAccessToken,
+          });
+
+          // Attempt provisioning (should only be done once) XXX
+          console.log("Controller url: ", controller_url)
+
+          const provision_request: RequestInfo = new Request(controller_url, {
+            method: `POST`,
+            headers: headers,
+            body: jsondata,
+          });
+          let provision_url = controller_url + "provision/" + tokenId;
+
+          console.log(provision_url)
+
+          const response = await fetch(provision_url, provision_request);
+          if (!response.ok) {
+            throw new Error(`Error! status: ${response.status}`);
+          }
+
+          const provision_unit_response = await response.json();
+          if (provision_unit_response == "Deployed into hivelocity") {
+            xnodeData.provider = "hivelocity"; // Why?
+          } else if (provision_unit_response == "Internal server error") {
+            throw new Error(`Unable to provision Xnode Unit`);
+          } else {
+            console.log("Fatal provisioning error.");
+          }
+        }
+      }
+
+      // Add the xnode deployment to our database.
+      const xnode = await this.prisma.deployment.create({
+        data: {
+          id: xnodeId,
+          accessToken: xnodeAccessToken,
+          isUnit: xnodeData.isUnit,
+          openmeshExpertUserId: user.id,
+
+          // XXX: Need xu controller to support ip address, placeholder for now.
+          ipAddress: "172.67.132.118",
+          unitClaimTime: nftMintDate,
+          deploymentAuth: xnodeData.deploymentAuth,
+          ...xnodeData,
+        },
       });
-      // Attempt provisioning (should only be done once) XXX
-      const provision_request: RequestInfo = new Request(controller_url, {
-        method: `POST`,
-        headers: headers,
-        body: jsondata,
-      });
-      // let provision_url = controller_url + "provision/" + xnode.nftId;
 
-      // const response = await fetch(provision_url, provision_request);
-      // if (!response.ok) {
-      //   throw new Error(`Error! status: ${response.status}`);
-      // }
-      // const provision_unit_response = await response.json();
-      // if (provision_unit_response == "Deployed into hivelocity") {
-      //   xnode.provider = "hivelocity";
-      // } else if (provision_unit_response == "Internal server error") {
-      //   throw new Error(`Unable to provision Xnode Unit`);
-      // } else {
-      //   console.log("Fatal provisioning error.");
-      // }
-    } // else: deploy into provider using xnode.apiKey
+      if (!xnode) {
+        const errMessage = "Failed adding to database";
+        console.error(errMessage);
+        throw new Error(errMessage);
+      }
 
-    return xnode;
+      console.log('Added Xnode to the database');
+      console.log("Xnode deployed");
+
+      return xnode
+    } else { // Non Xnode units.
+      // Deploy into a provider via api proxy?
+      console.error("Not currently supported...")
+      throw new Error("Not currently supported.")
+    }
   }
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const accessToken = String(req.headers['x-parse-session-token']); // Does not make sense, access token = session token?
     const node = await this.prisma.deployment.findFirst({
       where: {
         AND: [
@@ -214,6 +280,7 @@ export class XnodesService {
             id: dataBody.id,
           },
           {
+            // Hmac validation
             accessToken: accessToken
           }
         ]
@@ -224,7 +291,7 @@ export class XnodesService {
   }
 
   async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const accessToken = String(req.headers['x-parse-session-token']); // Rename session token to avoid confusion with browser sessions
 
     const { id, ...data} = dataBody;
 
@@ -236,6 +303,7 @@ export class XnodesService {
               id: id,
             },
             {
+            // Hmac validation              
               accessToken: accessToken
             }
           ]
@@ -251,104 +319,10 @@ export class XnodesService {
       });
     }
   }
-  // XXX: Can get information from node_information/<xnode-unit-token-id>
-  //since the azure pipeline does not have a websocket to connect to see when the deployment is ready, we need to call the api every 2 seconds to see if the deploy was successfull
-  async getXnodeDeploymentLog(tagId: any, xnodeId) {
-    return new Promise<void>(async (resolve, reject) => {
-      const encodedCredentials = Buffer.from(`user:${this.PAT}`).toString(
-        'base64',
-      );
-
-      let interval: NodeJS.Timeout; // Variável para armazenar o intervalo
-
-      const fetchBuildId = async () => {
-        try {
-          const response = await axios.get(
-            `https://dev.azure.com/gdafund/L3/_apis/build/builds?tagFilters=${tagId}`,
-            {
-              headers: {
-                Authorization: `Basic ${encodedCredentials}`,
-              },
-            },
-          );
-          console.log('getting data build');
-
-          if (response.data?.value.length > 0) {
-            const buildId = response.data.value[0].id;
-            console.log('found build');
-            console.log(buildId);
-            await this.prisma.xnode.update({
-              where: {
-                id: xnodeId,
-              },
-              data: {
-                buildId: JSON.stringify(buildId),
-              },
-            });
-            this.getBuildLogs(buildId, xnodeId);
-            clearInterval(interval); // Limpa o intervalo quando a condição de sucesso for atendida
-            resolve(); // Resolve a promessa
-          }
-        } catch (error) {
-          console.error('error getting build:', error);
-          clearInterval(interval); // Limpa o intervalo em caso de erro
-          reject(error); // Rejeita a promessa
-        }
-      };
-
-      await fetchBuildId();
-
-      interval = setInterval(fetchBuildId, 10000); // Configura o intervalo
-    });
-  }
-
-  async getBuildLogs(buildId: string, xnodeId: string): Promise<void> {
-    return new Promise<void>(async (resolve, reject) => {
-      const encodedCredentials = Buffer.from(`user:${this.PAT}`).toString(
-        'base64',
-      );
-
-      let interval: NodeJS.Timeout;
-
-      const fetchLogs = async () => {
-        try {
-          const response = await axios.get(
-            `https://dev.azure.com/gdafund/L3/_apis/build/builds/${buildId}/logs?api-version=7.1-preview.2`,
-            {
-              headers: {
-                Authorization: `Basic ${encodedCredentials}`,
-              },
-            },
-          );
-
-          if (response.data?.value) {
-            console.log('the response data');
-            if (response.data.value.some((log: any) => log.id > 31)) {
-              console.log('YES LOG DONE');
-              await this.prisma.xnode.update({
-                where: {
-                  id: xnodeId,
-                },
-                data: {
-                  status: 'Running',
-                },
-              });
-              clearInterval(interval);
-              resolve(); // Resolve a promessa quando a condição é atendida
-            }
-          }
-        } catch (error) {
-          console.error('Erro ao buscar os logs:', error);
-          clearInterval(interval);
-          reject(error); // Rejeita a promessa em caso de erro
-        }
-      };
-
-      await fetchLogs();
-
-      interval = setInterval(fetchLogs, 20000);
-    });
-  }
+  // TODO: Can get information from node_information/<xnode-unit-token-id>
+  //async fetch_unit_information(deployment: ) {
+    // STUB
+  //}
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
     // TODO: Double check this function works as expected.
@@ -454,7 +428,7 @@ export class XnodesService {
       nodes: nodesListing,
     };
   }
-
+  /*
   async storeXnodeData(data: StoreXnodeData) {
     console.log('the log data');
 
@@ -485,7 +459,7 @@ export class XnodesService {
         ...finalData,
       },
     });
-  }
+  } */
 
   async storeXnodeSigningMessage(
     dataBody: StoreXnodeSigningMessageDataDTO,
@@ -861,9 +835,4 @@ export class XnodesService {
 
     return { message: 'CSV file created', filePath };
   }
-
-  // async deleteTable() {
-  //   await this.prisma.$queryRaw`DROP EXTENSION timescaledb;`;
-  //   console.log('Tabela "chunk" excluída com sucesso.');
-  // }
 }

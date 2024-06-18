@@ -46,7 +46,7 @@ export class UtilsService {
   usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS;
   usdtTokenAddress = process.env.USDT_TOKEN_ADDRESS;
   wEthTokenAddress = process.env.WETH_TOKEN_ADDRESS;
-  webhookSigningKey = 'audjduisodoid-213424-214214-ewqewqeqwe-kskak';
+  // webhookSigningKey = ''
   environment = process.env.ENVIRONMENT;
 
   //Funcion to check if a task desc has any type of link, this is utilize to check if the task might have some type of spam / scam
@@ -56,7 +56,9 @@ export class UtilsService {
     function isAllowedLink(link: string): boolean {
       // Allow to have links that are any subdomain of google (docs.google for instance) and github links
       // const allowedPatterns = [/github/, /\.google/];
-      const allowedPatterns = [/github/];
+
+      const allowedPatterns = [/github/]; // Probably not sufficient input sanitization - TODO: Split OpenR&D into a separate codebase
+
       return allowedPatterns.some((pattern) => pattern.test(link));
     }
     function removeLinksFromText(
@@ -79,13 +81,14 @@ export class UtilsService {
       return newText;
     }
     const spamsList = [];
-    const matches = this.linkify.match(text);
+    // XXX: (Mostly) unsanitized user input into match()
+    const matches = this.linkify.match(text); 
     if (matches) {
       for (const match of matches) {
         if (isAllowedLink(match.url)) {
           console.log(`Link allowed found: ${match.url}`);
         } else {
-          console.log(`Potencially spam link found: ${match.url}`);
+          console.log(`Potential spam link found: ${match.url}`);
           spamsList.push(match.url);
         }
       }
@@ -106,7 +109,6 @@ export class UtilsService {
           description: textWithoutSpamLinks, //here the description without the spam links,
         },
       });
-      return;
     }
   }
 
@@ -357,7 +359,7 @@ export class UtilsService {
   }
 
   //example of dataBody: {﻿created_at: '2023-08-14T16:37:00.000000Z',﻿created_by: 'https://api.calendly.com/users/bb4efcfa-56d4-4751-acfd-644af5f372d7';,﻿event: 'invitee.created',﻿payload: {﻿cancel_url: 'https://calendly.com/cancellations/30429fd6-dcc5-4b15-aa65-d9f658df7c21';,﻿created_at: '2023-08-14T16:37:00.264437Z',﻿email: 'brunolsantos152@gmail.com',﻿event: 'https://api.calendly.com/scheduled_events/aa3f7446-d8b6-422c-8414-cada16e33158';,﻿first_name: null,﻿last_name: null,﻿name: 'BRUNO LAUREANO DOS SANTOS',﻿new_invitee: null,﻿no_show: null,﻿old_invitee: null,﻿payment: null,﻿questions_and_answers: [ [Object] ],﻿reconfirmation: null,﻿reschedule_url: 'https://calendly.com/reschedulings/30429fd6-dcc5-4b15-aa65-d9f658df7c21';,﻿rescheduled: false,﻿routing_form_submission: null,﻿scheduled_event: {﻿created_at: '2023-08-14T16:37:00.249519Z',﻿end_time: '2023-08-30T14:00:00.000000Z',﻿event_guests: [],﻿event_memberships: [Array],﻿event_type: 'https://api.calendly.com/event_types/e153a182-7013-4e45-8ddc-430089ba3381';,﻿invitees_counter: [Object],﻿location: [Object],﻿name: 'Test event type',﻿start_time: '2023-08-30T13:30:00.000000Z',﻿status: 'active',﻿updated_at: '2023-08-14T16:37:00.249519Z',﻿uri: 'https://api.calendly.com/scheduled_events/aa3f7446-d8b6-422c-8414-cada16e33158';﻿},﻿status: 'active',﻿text_reminder_number: null,﻿timezone: 'America/Sao_Paulo',﻿tracking: {﻿utm_campaign: null,﻿utm_source: null,﻿utm_medium: null,﻿utm_content: null,﻿utm_term: null,﻿salesforce_uuid: null﻿},﻿updated_at: '2023-08-14T16:37:00.264437Z',﻿uri: 'https://api.calendly.com/scheduled_events/aa3f7446-d8b6-422c-8414-cada16e33158/invitees/30429fd6-dcc5-4b15-aa65-d9f658df7c21';﻿}﻿}
-  async calendlyWebhook(dataBody: any, req: Request) {
+  /* async calendlyWebhook(dataBody: any, req: Request) {
     console.log('chamado');
     console.log(dataBody);
     const keySignature = String(req.headers['calendly-webhook-signature']);
@@ -483,7 +485,7 @@ export class UtilsService {
     //     console.log(err);
     //   }
     // }
-  }
+  } */
 
   hashObject(obj: any): string {
     const str = JSON.stringify(obj);

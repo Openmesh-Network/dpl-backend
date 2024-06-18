@@ -78,7 +78,7 @@ export class CreateXnodeDto {
     description: 'The nft id',
     example: ['{}'],
   })
-  nftId: string;
+  deploymentAuth: string;
 
   @IsNotEmpty()
   @IsString()
