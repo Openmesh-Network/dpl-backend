@@ -198,7 +198,7 @@ export class XnodesController {
     name: 'X-Parse-Application-Id',
     description: 'Token mandatory to connect with the app',
   })
-  @Get('getXnode')
+  @Post('getXnode')
   getXnode(@Body() data: GetXnodeDto, @Req() req: Request) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();

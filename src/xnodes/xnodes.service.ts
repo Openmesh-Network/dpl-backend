@@ -351,12 +351,13 @@ export class XnodesService {
   }
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
+    // TODO: Double check this function works as expected.
     const accessToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
       accessToken,
     );
 
-    const xnodes = await this.prisma.xnode.findFirst({
+    const xnodes = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.xnodeId,
         openmeshExpertUserId: user.id,
@@ -372,7 +373,7 @@ export class XnodesService {
 
     const { xnodeId, ...finalBody } = dataBody;
 
-    return await this.prisma.xnode.update({
+    return await this.prisma.deployment.update({
       data: {
         ...finalBody,
       },
@@ -388,7 +389,7 @@ export class XnodesService {
       accessToken,
     );
 
-    return await this.prisma.xnode.findFirst({
+    return await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
         openmeshExpertUserId: user.id,
