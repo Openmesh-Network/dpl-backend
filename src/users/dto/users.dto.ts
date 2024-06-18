@@ -14,7 +14,6 @@ import {
   IsArray,
   MaxLength,
 } from 'class-validator';
-import { CountingDto } from 'src/tasks/dto/tasks.dto';
 
 export class GetUserDTO {
   @IsString()
