@@ -124,7 +124,6 @@ export class XnodesService {
 
     if (xnodeData.isUnit) {
 
-      // TODO: Maybe move this above?
       let allowedTokenIdChars = "0123456789" // Must be uint256
       for (let char of xnodeData.deploymentAuth) {
         if (!allowedTokenIdChars.includes(char)) {
@@ -137,9 +136,8 @@ export class XnodesService {
       { // Check web3Address owns NFT.
         try {
           // XXX: Further testing is required.
-          // TODO (Harsh): Check that xnode.nftId is valid here!
-          // XXX: BUG HERE
           console.log("Token id: ", tokenId)
+          // TODO: Consider caching these requests. We are charged by usage.
           nftOwner = await this.XuContractConnect.ownerOf(tokenId)
 
           console.log('Nft owner: ', nftOwner)
@@ -157,9 +155,12 @@ export class XnodesService {
 
       let nftMintDate = undefined
       console.log("Checking NFT date.")
+
+      // TODO: Consider caching these requests. We are charged by usage.
       { // Check NFT date.
         try {
           // XXX: Not all RPC providers support events.
+          // Works with our ankr API.
           const filter = this.XuContractConnect.filters.Transfer(null, null, tokenId);
           const events = await this.XuContractConnect.queryFilter(filter)
 
@@ -225,6 +226,7 @@ export class XnodesService {
           if (!response.ok) {
             throw new Error(`Error! status: ${response.status}`);
           }
+
           const provision_unit_response = await response.json();
           if (provision_unit_response == "Deployed into hivelocity") {
             xnodeData.provider = "hivelocity"; // Why?
@@ -253,16 +255,16 @@ export class XnodesService {
       });
 
       if (!xnode) {
-        const errMessage = "Failed adding to database"
-        console.error(errMessage)
-        throw new Error(errMessage)
+        const errMessage = "Failed adding to database";
+        console.error(errMessage);
+        throw new Error(errMessage);
       }
 
       console.log('Added Xnode to the database');
       console.log("Xnode deployed");
 
       return xnode
-    } else { // !dataNode.isUnit
+    } else { // Non Xnode units.
       // Deploy into a provider via api proxy?
       console.error("Not currently supported...")
       throw new Error("Not currently supported.")
