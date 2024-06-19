@@ -40,7 +40,7 @@ export class DomuService {
       'privateKey',
     );
 
-    console.log('jwttoke');
+    console.log('jwttoken');
     console.log(jwtToken);
   }
 }

@@ -96,7 +96,7 @@ export class XnodesService {
       `0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5`,
       `0x99acBe5d487421cbd63bBa3673132E634a6b4720`,
       `0x7703d5753c54852d4249f9784a3e8a6eea08e1dd`,
-      `0xa4a336783326241acff520d91eb8841ad3b9bd1a`,
+      `0xA4a336783326241acFf520D91eb8841Ad3B9BD1a`,
     ];
 
     let isWhitelisted = false;
@@ -194,7 +194,7 @@ export class XnodesService {
       console.log("Nft mint date: ", nftMintDate)
 
       {
-        if (1) {
+        if (0) {
           // XXX: Re-enable the xu-controller API code.
         } else {
           // Talk to the unit controller API. - Needs refactoring
@@ -203,6 +203,7 @@ export class XnodesService {
 
           // TODO: Test this, doesn't look correct:
           headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
+          headers.set('Content-Type', 'application/json')
           let jsondata = JSON.stringify({
             // get the walletAddress for the user from prisma
             WalletAddress: user.walletAddress,
@@ -218,15 +219,16 @@ export class XnodesService {
             headers: headers,
             body: jsondata,
           });
-          let provision_url = controller_url + "provision/" + tokenId;
+          let provision_url = controller_url + "/provision/" + tokenId;
 
           console.log(provision_url)
 
           const response = await fetch(provision_url, provision_request);
           if (!response.ok) {
+            console.log(response)
             throw new Error(`Error! status: ${response.status}`);
           }
-
+          /*
           const provision_unit_response = await response.json();
           if (provision_unit_response == "Deployed into hivelocity") {
             xnodeData.provider = "hivelocity"; // Why?
@@ -234,7 +236,7 @@ export class XnodesService {
             throw new Error(`Unable to provision Xnode Unit`);
           } else {
             console.log("Fatal provisioning error.");
-          }
+          } */
         }
       }
 
@@ -245,7 +247,7 @@ export class XnodesService {
           accessToken: xnodeAccessToken,
           isUnit: xnodeData.isUnit,
           openmeshExpertUserId: user.id,
-
+          services: services,
           // XXX: Need xu controller to support ip address, placeholder for now.
           ipAddress: "172.67.132.118",
           unitClaimTime: nftMintDate,

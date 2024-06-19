@@ -7,10 +7,6 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import * as fastcsv from 'fast-csv';
-// import { import_ } from '@brillout/import';
-import { ethers } from 'ethers';
-import * as taskContractABI from '../contracts/taskContractABI.json';
-import * as erc20ContractABI from '../contracts/erc20ContractABI.json';
 
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
@@ -19,13 +15,6 @@ import { JwtService } from '@nestjs/jwt';
 
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
-import * as speakeasy from 'speakeasy';
-import * as qrcode from 'qrcode';
-import { SimpleCrypto } from 'simple-crypto-js';
-
-import * as tasksDraftContractABI from '../contracts/tasksDraftContractABI.json';
-import * as nftContractABI from '../contracts/nftContractABI.json';
-import * as tokenListGovernanceABI from '../contracts/tokenListGovernanceABI.json';
 
 import { PrismaService } from '../database/prisma.service';
 import { Request, response } from 'express';
