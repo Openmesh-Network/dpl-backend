@@ -39,7 +39,7 @@ import {
   UpdateXnodeDto,
 } from './dto/xnodes.dto';
 import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
-import { features } from 'process';
+import { env, features } from 'process';
 import {
   defaultSourcePayload,
   defaultStreamProcessorPayload,
@@ -194,7 +194,7 @@ export class XnodesService {
       console.log("Nft mint date: ", nftMintDate)
 
       {
-        if (0) {
+        if (process.env.XU_CONTROLLER_ENABLE == "0") {
           // XXX: Re-enable the xu-controller API code.
         } else {
           // Talk to the unit controller API. - Needs refactoring
@@ -275,6 +275,10 @@ export class XnodesService {
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']); // Does not make sense, access token = session token?
+
+
+    console.log("About to get services for node. ID: ", dataBody.id, ", accessToken: ", accessToken)
+
     const node = await this.prisma.deployment.findFirst({
       where: {
         AND: [
