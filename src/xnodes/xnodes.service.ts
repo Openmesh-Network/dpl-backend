@@ -193,12 +193,72 @@ export class XnodesService {
 
       console.log("Nft mint date: ", nftMintDate)
 
+      let ipAddress = ""
       {
         if (process.env.XU_CONTROLLER_ENABLE == "0") {
           // XXX: Re-enable the xu-controller API code.
+
+
+          // Do round-robbin with hivelocity servers instead.
+          const serverIds = process.env.HIVELOCITY_SERVER_IDS.split(",")
+
+          let headers = new Headers()
+
+          // XXX: Replace this with env var
+          headers.set('X-API-KEY', process.env.HIVELOCITY_KEY)
+          headers.set('accept', 'application/json')
+          headers.set('content-type', 'application/json')
+
+          // 1. Shutdown
+          {
+            const shutdownUrl = 'https://core.hivelocity.net/api/v2/device/' + serverIds[0] + '/power?action=shutdown'
+            const provisionRequest: RequestInfo = new Request(shutdownUrl, {
+              method: `POST`,
+              headers: headers,
+            });
+
+            const response = await fetch(shutdownUrl, provisionRequest)
+
+            if (!response.ok) {
+              console.log(response)
+              console.log(await response.json())
+              // throw new Error(`Error shutting down! status: ${response.status}`);
+            }
+
+            console.log(response)
+          }
+
+          // 2. Reset + keys
+          const resetData = {
+            forceReload: true,
+            hostname: "xnode.openmesh.network",
+            osName: "Ubuntu 22.04 (VPS)",
+            script: "#cloud-config \nruncmd: \n - \"mkdir /tmp/boot && mount -t tmpfs -osize=90% none /tmp/boot && mkdir /tmp/boot/__img && wget -q -O /tmp/boot/__img/kexec.tar.xz http://boot.opnm.sh/kexec.tar.xz && mkdir /tmp/boot/system && mkdir /tmp/boot/system/proc && mount -t proc /proc /tmp/boot/system/proc && tar xvf /tmp/boot/__img/kexec.tar.xz -C /tmp/boot/system && rm /tmp/boot/__img/kexec.tar.xz && chroot /tmp/boot/system ./kexec_nixos \\\"-- XNODE_UUID=" + xnodeId + " XNODE_ACCESS_TOKEN=" + xnodeAccessToken + "\\\"\""
+          }
+
+          const url = 'https://core.hivelocity.net/api/v2/compute/' + serverIds[0]
+          const resetRequest: RequestInfo = new Request('https://core.hivelocity.net/api/v2/compute/' + serverIds[0], {
+            method: `PUT`,
+            headers: headers,
+            body: JSON.stringify(resetData),
+          });
+
+          const response = await fetch(url, resetRequest)
+          if (!response.ok) {
+            console.error(response)
+            const data = await response.json()
+            console.log(data)
+
+            throw new Error("Failed to provision: " + response.status)
+          } else {
+            const data = await response.json()
+            console.log(data)
+
+            ipAddress = data.primaryIp
+          }
         } else {
           // Talk to the unit controller API. - Needs refactoring
-          let controller_url = this.XU_CONTROLLER_URL;
+          let controllerUrl = this.XU_CONTROLLER_URL;
           let headers: Headers = new Headers();
 
           // TODO: Test this, doesn't look correct:
@@ -212,18 +272,18 @@ export class XnodesService {
           });
 
           // Attempt provisioning (should only be done once) XXX
-          console.log("Controller url: ", controller_url)
+          console.log("Controller url: ", controllerUrl)
 
-          const provision_request: RequestInfo = new Request(controller_url, {
+          const provisionRequest: RequestInfo = new Request(controllerUrl, {
             method: `POST`,
             headers: headers,
             body: jsondata,
           });
-          let provision_url = controller_url + "/provision/" + tokenId;
+          let provisionUrl = controllerUrl + "/provision/" + tokenId;
 
-          console.log(provision_url)
+          console.log(provisionUrl)
 
-          const response = await fetch(provision_url, provision_request);
+          const response = await fetch(provisionUrl, provisionRequest);
           if (!response.ok) {
             console.log(response)
             throw new Error(`Error! status: ${response.status}`);
@@ -236,7 +296,8 @@ export class XnodesService {
             throw new Error(`Unable to provision Xnode Unit`);
           } else {
             console.log("Fatal provisioning error.");
-          } */
+          }
+          */
         }
       }
 
@@ -249,7 +310,7 @@ export class XnodesService {
           openmeshExpertUserId: user.id,
           services: services,
           // XXX: Need xu controller to support ip address, placeholder for now.
-          ipAddress: "172.67.132.118",
+          ipAddress: ipAddress,
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
           ...xnodeData,
@@ -268,6 +329,8 @@ export class XnodesService {
       return xnode
     } else { // Non Xnode units.
       // Deploy into a provider via api proxy?
+
+      // TODO: Connect to xnode deployment backend instead.
       console.error("Not currently supported...")
       throw new Error("Not currently supported.")
     }
