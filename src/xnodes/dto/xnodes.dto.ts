@@ -166,6 +166,26 @@ export class GetXnodeServiceDto {
   id: string;
 }
 
+export class PushXnodeServiceDto {
+  @IsNotEmpty()
+  @MaxLength(1000)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode\'s id',
+    maxLength: 1000,
+  })
+  id: string;
+
+  @IsNotEmpty()
+  @MaxLength(1000)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode\'s services',
+    maxLength: 1000,
+  })
+  services: string;
+}
+
 export class UpdateXnodeDto {
   @IsNotEmpty()
   @IsString()

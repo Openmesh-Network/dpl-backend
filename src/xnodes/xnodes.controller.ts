@@ -30,6 +30,7 @@ import {
   GetXnodeDto,
   XnodeHeartbeatDto,
   GetXnodeServiceDto,
+  PushXnodeServiceDto,
   StoreXnodeData,
   StoreXnodeSigningMessageDataDTO,
   UpdateXnodeDto,
@@ -75,6 +76,18 @@ export class XnodesController {
   @Get('getXnodeServices')
   getXnodeServices(@Body() data: GetXnodeServiceDto, @Req() req: Request) {
     return this.xnodesService.getXnodeServices(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Pushes the services',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Get('pushXnodeServices')
+  pushXnodeServices(@Body() data: PushXnodeServiceDto, @Req() req: Request) {
+    return this.xnodesService.pushXnodeServices(data, req);
   }
 
   @ApiOperation({

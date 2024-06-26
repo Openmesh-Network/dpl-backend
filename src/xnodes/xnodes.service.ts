@@ -34,6 +34,7 @@ import {
   XnodeHeartbeatDto,
   GetXnodeDto,
   GetXnodeServiceDto,
+  PushXnodeServiceDto,
   StoreXnodeData,
   StoreXnodeSigningMessageDataDTO,
   UpdateXnodeDto,
@@ -46,6 +47,7 @@ import {
   defaultWSPayload,
 } from './utils/constants';
 import { generateUUID8, generateUUID16 } from './utils/uuidGenerator';
+import { time } from 'console';
 
 @Injectable()
 export class XnodesService {
@@ -76,6 +78,8 @@ export class XnodesService {
         openmeshExpertUserId: user.id,
       },
     });
+
+    console.log("CreateXnode request")
 
     // XXX: Handle more elegantly? Maybe offer user the chance to delete Xnodes.
     // This actually works OK for now. Just important to note.
@@ -108,7 +112,8 @@ export class XnodesService {
 
     // XXX: Disable whitelist.
     if (!isWhitelisted) {
-      throw new Error("Not whitelisted, stay posted on our social media for the official launch.");
+      console.error("User not whitelisted.")
+      throw new Error("Not whitelisted, stay posted on our social media for full release.");
     }
 
     console.log('Final services:');
@@ -124,7 +129,7 @@ export class XnodesService {
 
     if (xnodeData.isUnit) {
 
-      let allowedTokenIdChars = "0123456789" // Must be uint256
+      let allowedTokenIdChars = "0123456789"
       for (let char of xnodeData.deploymentAuth) {
         if (!allowedTokenIdChars.includes(char)) {
           throw new Error(`Invalid NFT TokenId`);
@@ -195,15 +200,23 @@ export class XnodesService {
 
       let ipAddress = ""
       {
-        if (process.env.mock_deployment == "1") {
+        if (process.env.MOCK_DEPLOYMENT == "1") {
           console.log("Mock deployment enabled, not talking to any APIs or controller")
-        } else if (process.env.xu_controller_enable == "0") {
+        } else if (process.env.XU_CONTROLLER_ENABLE == "0") {
           // XXX: Re-enable the xu-controller API code.
 
           console.log("XU controller disabled, doing round-robbin reset with known hivelocity servers instead.")
 
           // Do round-robbin with hivelocity servers instead.
           const serverIds = process.env.HIVELOCITY_SERVER_IDS.split(",")
+
+          if (serverIds.length < 1) {
+            console.error("Need to specify hivelocity server ids. Is HIVELOCITY_SERVER_IDS env var not set?")
+            throw new Error("No available servers, check dpl logs.")
+          }
+
+          // XXX: Actually do a round-robbin.
+          const serverId = serverIds[0]
 
           let headers = new Headers()
 
@@ -212,9 +225,10 @@ export class XnodesService {
           headers.set('accept', 'application/json')
           headers.set('content-type', 'application/json')
 
-          // 1. Shutdown
           {
-            const shutdownUrl = 'https://core.hivelocity.net/api/v2/device/' + serverIds[0] + '/power?action=shutdown'
+            // 1. Shutdown
+            console.log("Sending shutdown request.")
+            const shutdownUrl = 'https://core.hivelocity.net/api/v2/device/' + serverId + '/power?action=shutdown'
             const provisionRequest: RequestInfo = new Request(shutdownUrl, {
               method: `POST`,
               headers: headers,
@@ -223,41 +237,88 @@ export class XnodesService {
             const response = await fetch(shutdownUrl, provisionRequest)
 
             if (!response.ok) {
-              console.log(response)
+              // console.log(response)
+              console.log("Server id: ", serverId)
               console.log(await response.json())
               // throw new Error(`Error shutting down! status: ${response.status}`);
             }
-
-            console.log(response)
           }
 
-          // 2. Reset + keys
-          const resetData = {
-            forceReload: true,
-            hostname: "xnode.openmesh.network",
-            osName: "Ubuntu 22.04 (VPS)",
-            script: "#cloud-config \nruncmd: \n - \"mkdir /tmp/boot && mount -t tmpfs -osize=90% none /tmp/boot && mkdir /tmp/boot/__img && wget -q -O /tmp/boot/__img/kexec.tar.xz http://boot.opnm.sh/kexec.tar.xz && mkdir /tmp/boot/system && mkdir /tmp/boot/system/proc && mount -t proc /proc /tmp/boot/system/proc && tar xvf /tmp/boot/__img/kexec.tar.xz -C /tmp/boot/system && rm /tmp/boot/__img/kexec.tar.xz && chroot /tmp/boot/system ./kexec_nixos \\\"-- XNODE_UUID=" + xnodeId + " XNODE_ACCESS_TOKEN=" + xnodeAccessToken + "\\\"\""
+          // XXX: Actually change architecture to do this asynchronously, instead of hanging on this one request.
+          {
+            // 2. Wait for the server to actually be shutdown.
+            console.log("Waiting for power status off.")
+            const attemptLimit = 30;
+            let attemptCount = 0;
+            let success = false;
+            const powerUrl = 'https://core.hivelocity.net/api/v2/device/' + serverId + '/power'
+            const powerRequest = new Request(powerUrl,  {
+              method: 'GET',
+              headers: headers
+            })
+
+            while (attemptCount < attemptLimit) {
+              const response = await fetch(powerUrl, powerRequest)
+
+              if (response.ok) {
+                // success = true
+                // console.log(response)
+
+                const data = await response.json()
+
+                if (data.powerStatus == "OFF") {
+                  console.log("Machine is off, proceeding.")
+                  success = true
+                  break
+                } else {
+                  console.log("Machine is on, trying again.")
+                }
+                // break
+              }
+
+              attemptCount ++;
+
+              function sleep(ms) {
+                return new Promise((resolve) => {
+                  setTimeout(resolve, ms);
+                });
+              }
+
+              await sleep(1000)
+            }
+
+            console.log("Finished waiting for status after ", attemptCount, " attempts.")
           }
 
-          const url = 'https://core.hivelocity.net/api/v2/compute/' + serverIds[0]
-          const resetRequest: RequestInfo = new Request('https://core.hivelocity.net/api/v2/compute/' + serverIds[0], {
-            method: `PUT`,
-            headers: headers,
-            body: JSON.stringify(resetData),
-          });
+          {
+            // 3. Reset + keys
+            const resetData = {
+              forceReload: true,
+              hostname: "xnode.openmesh.network",
+              osName: "Ubuntu 22.04 (VPS)",
+              script: "#cloud-config \nruncmd: \n - \"mkdir /tmp/boot && mount -t tmpfs -osize=90% none /tmp/boot && mkdir /tmp/boot/__img && wget -q -O /tmp/boot/__img/kexec.tar.xz http://boot.opnm.sh/kexec.tar.xz && mkdir /tmp/boot/system && mkdir /tmp/boot/system/proc && mount -t proc /proc /tmp/boot/system/proc && tar xvf /tmp/boot/__img/kexec.tar.xz -C /tmp/boot/system && rm /tmp/boot/__img/kexec.tar.xz && chroot /tmp/boot/system ./kexec_nixos \\\"-- XNODE_UUID=" + xnodeId + " XNODE_ACCESS_TOKEN=" + xnodeAccessToken + "\\\"\""
+            }
 
-          const response = await fetch(url, resetRequest)
-          if (!response.ok) {
-            console.error(response)
-            const data = await response.json()
-            console.log(data)
+            const url = 'https://core.hivelocity.net/api/v2/compute/' + serverId
+            const resetRequest: RequestInfo = new Request('https://core.hivelocity.net/api/v2/compute/' + serverId, {
+              method: `PUT`,
+              headers: headers,
+              body: JSON.stringify(resetData),
+            });
 
-            throw new Error("Failed to provision: " + response.status)
-          } else {
-            const data = await response.json()
-            console.log(data)
+            const response = await fetch(url, resetRequest)
+            if (!response.ok) {
+              console.error(response)
+              const data = await response.json()
+              console.log(data)
 
-            ipAddress = data.primaryIp
+              throw new Error("Failed to provision: " + response.status)
+            } else {
+              const data = await response.json()
+              console.log(data)
+
+              ipAddress = data.primaryIp
+            }
           }
         } else {
           // Talk to the unit controller API. - Needs refactoring
@@ -331,8 +392,6 @@ export class XnodesService {
 
       return xnode
     } else { // Non Xnode units.
-      // Deploy into a provider via api proxy?
-
       // TODO: Connect to xnode deployment backend instead.
       console.error("Not currently supported...")
       throw new Error("Not currently supported.")
@@ -340,7 +399,7 @@ export class XnodesService {
   }
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']); // Does not make sense, access token = session token?
+    const accessToken = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     console.log("About to get services for node. ID: ", dataBody.id, ", accessToken: ", accessToken)
 
@@ -361,8 +420,40 @@ export class XnodesService {
     return node.services
   }
 
+  async pushXnodeServices(dataBody: PushXnodeServiceDto, req: Request) {
+    const accessToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      accessToken,
+    );
+
+    console.log("Request to update services from user: ", user.id, "request: ", dataBody)
+
+    if (!user) {
+      throw new Error("Unauthorized user.")
+    } else {
+      console.log("Setting services for node. ID: ", dataBody.id)
+
+      // Actually update.
+      this.prisma.deployment.updateMany({
+        where: {
+          AND: [
+            {
+              id: dataBody.id,
+            },
+            {
+              openmeshExpertUserId: user.id,
+            }
+          ]
+        },
+        data: {
+          services: dataBody.services
+        }
+      })
+    }
+  }
+
   async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']); // Rename session token to avoid confusion with browser sessions
+    const accessToken = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     const { id, ...data} = dataBody;
 
@@ -374,7 +465,7 @@ export class XnodesService {
               id: id,
             },
             {
-            // Hmac validation              
+              // TODO: Inlcude Hmac validation.
               accessToken: accessToken
             }
           ]
