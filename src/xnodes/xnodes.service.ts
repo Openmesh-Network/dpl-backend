@@ -195,9 +195,12 @@ export class XnodesService {
 
       let ipAddress = ""
       {
-        if (process.env.XU_CONTROLLER_ENABLE == "0") {
+        if (process.env.mock_deployment == "1") {
+          console.log("Mock deployment enabled, not talking to any APIs or controller")
+        } else if (process.env.xu_controller_enable == "0") {
           // XXX: Re-enable the xu-controller API code.
 
+          console.log("XU controller disabled, doing round-robbin reset with known hivelocity servers instead.")
 
           // Do round-robbin with hivelocity servers instead.
           const serverIds = process.env.HIVELOCITY_SERVER_IDS.split(",")
@@ -338,7 +341,6 @@ export class XnodesService {
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']); // Does not make sense, access token = session token?
-
 
     console.log("About to get services for node. ID: ", dataBody.id, ", accessToken: ", accessToken)
 
