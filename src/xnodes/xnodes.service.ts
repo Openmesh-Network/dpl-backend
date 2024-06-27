@@ -442,7 +442,7 @@ export class XnodesService {
       console.log("Setting services for node. ID: ", dataBody.id)
 
       // Actually update.
-      this.prisma.deployment.updateMany({
+      await this.prisma.deployment.updateMany({
         where: {
           AND: [
             {
