@@ -85,7 +85,7 @@ export class XnodesController {
     name: 'X-Parse-Application-Id',
     description: 'Token mandatory to connect with the app',
   })
-  @Get('pushXnodeServices')
+  @Post('pushXnodeServices')
   pushXnodeServices(@Body() data: PushXnodeServiceDto, @Req() req: Request) {
     return this.xnodesService.pushXnodeServices(data, req);
   }
