@@ -46,7 +46,6 @@ export class XnodesController {
   ) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
-  deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 
   @ApiOperation({
     summary: 'Create a xnode',

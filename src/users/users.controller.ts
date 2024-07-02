@@ -42,7 +42,6 @@ export class UsersController {
   ) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
-  deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 
   // Returns a specific user:
   @ApiOperation({
@@ -79,42 +78,6 @@ export class UsersController {
     return this.usersService.editUser(data);
   }
 
-  @ApiOperation({
-    summary: 'Submission to become a verified contributor',
-    description:
-      'To submit, its mandatory to check if the data was signed by the user (message signing) to assure that its the user who wants to submit its application. We create a hash with the data the user sent, the updatesNonce from the user and verifies if the signed messages matches the hash (with the address of the signer). Also, is mandatory to have a github connection',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @ApiResponse({ status: 200 })
-  @Post('verifiedContributorSumission')
-  verifiedContributorSumission(
-    @Body() data: VerifiedContributorSubmissionDTO,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.usersService.verifiedContributorSumission(data);
-  }
-
-  // Returns a specific task:
-  @ApiOperation({
-    summary: 'Edits an user profile',
-    description:
-      'To get the user github login social info - returns the access token',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('githubLogin')
-  githubLogin(@Body() data: GithubLoginDTO, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.usersService.githubLogin(data);
-  }
 /* Doesn't seem to be used in the frotend
   @ApiOperation({
     summary:

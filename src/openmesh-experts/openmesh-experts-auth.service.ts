@@ -21,13 +21,11 @@ import { Request, response } from 'express';
 import axios from 'axios';
 
 import { UtilsService } from '../utils/utils.service';
-import { OpenmeshExpertsEmailManagerService } from './openmesh-experts-email-manager.service';
 import {
   ChangePasswordOpenmeshExpertUserDTO,
   ConfirmEmailDTO,
   CreateOpenmeshExpertUserDTO,
   CreateOpenmeshExpertVerifiedContributorUserDTO,
-  EmailRecoverPasswordDTO,
   GetUserNonceDTO,
   LoginDTO,
   LoginWeb3DTO,
@@ -42,188 +40,187 @@ export class OpenmeshExpertsAuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-    private readonly openmeshExpertsEmailManagerService: OpenmeshExpertsEmailManagerService,
     private readonly utilsService: UtilsService,
   ) {}
 
-  async createUser(data: CreateOpenmeshExpertUserDTO) {
-    // const recaptchaValidated = await this.validateRecaptcha({
-    //   token: data.googleRecaptchaToken,
-    // });
-    // if (!recaptchaValidated) {
-    //   throw new BadRequestException('Recaptcha incorrect', {
-    //     cause: new Error(),
-    //     description: 'Recaptcha incorrect',
-    //   });
-    // }
-    const results = await this.prisma.openmeshExpertUser.findFirst({
-      where: {
-        email: data.email,
-      },
-    });
-    if (results) {
-      //if an account was already create with this email but the email was not confirmed,  we delete the old account and create a new one.
-      if (
-        results.confirmedEmail === false &&
-        Math.round(Number(results.createdAt) / 1000) + 86400 <
-          Math.round(Date.now() / 1000)
-      ) {
-        await this.prisma.openmeshExpertUser.delete({
-          where: {
-            id: results.id,
-          },
-        });
-      }
-      //if an account was already create with this email in less than 24 hours, we do not let it create another one.
-      else if (
-        results.confirmedEmail === false &&
-        Math.round(Number(results.createdAt) / 1000) + 86400 >=
-          Math.round(Date.now() / 1000)
-      ) {
-        throw new BadRequestException(
-          'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
-          {
-            cause: new Error(),
-            description:
-              'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
-          },
-        );
-      }
-      //If email is already in use:
-      else if (results.confirmedEmail) {
-        throw new BadRequestException('Email already in use', {
-          cause: new Error(),
-          description: 'Email already in use',
-        });
-      }
-    }
+  //async createUser(data: CreateOpenmeshExpertUserDTO) {
+  //  // const recaptchaValidated = await this.validateRecaptcha({
+  //  //   token: data.googleRecaptchaToken,
+  //  // });
+  //  // if (!recaptchaValidated) {
+  //  //   throw new BadRequestException('Recaptcha incorrect', {
+  //  //     cause: new Error(),
+  //  //     description: 'Recaptcha incorrect',
+  //  //   });
+  //  // }
+  //  const results = await this.prisma.openmeshExpertUser.findFirst({
+  //    where: {
+  //      email: data.email,
+  //    },
+  //  });
+  //  if (results) {
+  //    //if an account was already create with this email but the email was not confirmed,  we delete the old account and create a new one.
+  //    if (
+  //      results.confirmedEmail === false &&
+  //      Math.round(Number(results.createdAt) / 1000) + 86400 <
+  //        Math.round(Date.now() / 1000)
+  //    ) {
+  //      await this.prisma.openmeshExpertUser.delete({
+  //        where: {
+  //          id: results.id,
+  //        },
+  //      });
+  //    }
+  //    //if an account was already create with this email in less than 24 hours, we do not let it create another one.
+  //    else if (
+  //      results.confirmedEmail === false &&
+  //      Math.round(Number(results.createdAt) / 1000) + 86400 >=
+  //        Math.round(Date.now() / 1000)
+  //    ) {
+  //      throw new BadRequestException(
+  //        'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
+  //        {
+  //          cause: new Error(),
+  //          description:
+  //            'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
+  //        },
+  //      );
+  //    }
+  //    //If email is already in use:
+  //    else if (results.confirmedEmail) {
+  //      throw new BadRequestException('Email already in use', {
+  //        cause: new Error(),
+  //        description: 'Email already in use',
+  //      });
+  //    }
+  //  }
 
-    //generating password:
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(data.password, salt);
+  //  //generating password:
+  //  const salt = await bcrypt.genSalt();
+  //  const hashedPassword = await bcrypt.hash(data.password, salt);
 
-    const id = crypto.randomBytes(54);
-    const id2 = id.toString('hex');
-    console.log('login');
-    const { password, googleRecaptchaToken, ...rest } = data;
+  //  const id = crypto.randomBytes(54);
+  //  const id2 = id.toString('hex');
+  //  console.log('login');
+  //  const { password, googleRecaptchaToken, ...rest } = data;
 
-    const response = await this.prisma.openmeshExpertUser.create({
-      data: {
-        password: hashedPassword,
-        hashConfirmEmail: id2,
-        confirmedEmail: false,
-        ...rest,
-      },
-    });
+  //  const response = await this.prisma.openmeshExpertUser.create({
+  //    data: {
+  //      password: hashedPassword,
+  //      hashConfirmEmail: id2,
+  //      confirmedEmail: false,
+  //      ...rest,
+  //    },
+  //  });
 
-    const jwt = await this.jwtService.signAsync({ id: response.id });
+  //  const jwt = await this.jwtService.signAsync({ id: response.id });
 
-    // await this.emailSenderService.emailConfirmacaoConta(id2, data.email);
+  //  // await this.emailSenderService.emailConfirmacaoConta(id2, data.email);
 
-    const userFinalReturn = {
-      email: response.email,
-      sessionToken: jwt,
-    };
+  //  const userFinalReturn = {
+  //    email: response.email,
+  //    sessionToken: jwt,
+  //  };
 
-    await this.openmeshExpertsEmailManagerService.emailConfirmationAccount(
-      response.email,
-      id2,
-    );
+  //  await this.openmeshExpertsEmailManagerService.emailConfirmationAccount(
+  //    response.email,
+  //    id2,
+  //  );
 
-    //this.financeService.KYBBigData(response.id);
-    return userFinalReturn;
-  }
+  //  //this.financeService.KYBBigData(response.id);
+  //  return userFinalReturn;
+  //}
 
-  async createUserByVerifiedContributor(
-    data: CreateOpenmeshExpertVerifiedContributorUserDTO,
-  ) {
-    // const recaptchaValidated = await this.validateRecaptcha({
-    //   token: data.googleRecaptchaToken,
-    // });
-    // if (!recaptchaValidated) {
-    //   throw new BadRequestException('Recaptcha incorrect', {
-    //     cause: new Error(),
-    //     description: 'Recaptcha incorrect',
-    //   });
-    // }
-    const results = await this.prisma.openmeshExpertUser.findFirst({
-      where: {
-        email: data.email,
-      },
-    });
-    if (results) {
-      //if an account was already create with this email but the email was not confirmed,  we delete the old account and create a new one.
-      if (
-        results.confirmedEmail === false &&
-        Math.round(Number(results.createdAt) / 1000) + 86400 <
-          Math.round(Date.now() / 1000)
-      ) {
-        await this.prisma.openmeshExpertUser.delete({
-          where: {
-            id: results.id,
-          },
-        });
-      }
-      //if an account was already create with this email in less than 24 hours, we do not let it create another one.
-      else if (
-        results.confirmedEmail === false &&
-        Math.round(Number(results.createdAt) / 1000) + 86400 >=
-          Math.round(Date.now() / 1000)
-      ) {
-        throw new BadRequestException(
-          'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
-          {
-            cause: new Error(),
-            description:
-              'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
-          },
-        );
-      }
-      //If email is already in use:
-      else if (results.confirmedEmail) {
-        throw new BadRequestException('Email already in use', {
-          cause: new Error(),
-          description: 'Email already in use',
-        });
-      }
-    }
+  //async createUserByVerifiedContributor(
+  //  data: CreateOpenmeshExpertVerifiedContributorUserDTO,
+  //) {
+  //  // const recaptchaValidated = await this.validateRecaptcha({
+  //  //   token: data.googleRecaptchaToken,
+  //  // });
+  //  // if (!recaptchaValidated) {
+  //  //   throw new BadRequestException('Recaptcha incorrect', {
+  //  //     cause: new Error(),
+  //  //     description: 'Recaptcha incorrect',
+  //  //   });
+  //  // }
+  //  const results = await this.prisma.openmeshExpertUser.findFirst({
+  //    where: {
+  //      email: data.email,
+  //    },
+  //  });
+  //  if (results) {
+  //    //if an account was already create with this email but the email was not confirmed,  we delete the old account and create a new one.
+  //    if (
+  //      results.confirmedEmail === false &&
+  //      Math.round(Number(results.createdAt) / 1000) + 86400 <
+  //        Math.round(Date.now() / 1000)
+  //    ) {
+  //      await this.prisma.openmeshExpertUser.delete({
+  //        where: {
+  //          id: results.id,
+  //        },
+  //      });
+  //    }
+  //    //if an account was already create with this email in less than 24 hours, we do not let it create another one.
+  //    else if (
+  //      results.confirmedEmail === false &&
+  //      Math.round(Number(results.createdAt) / 1000) + 86400 >=
+  //        Math.round(Date.now() / 1000)
+  //    ) {
+  //      throw new BadRequestException(
+  //        'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
+  //        {
+  //          cause: new Error(),
+  //          description:
+  //            'Email already registered but not confirmed yet (wait 24 hours to try to register another account within this mail)',
+  //        },
+  //      );
+  //    }
+  //    //If email is already in use:
+  //    else if (results.confirmedEmail) {
+  //      throw new BadRequestException('Email already in use', {
+  //        cause: new Error(),
+  //        description: 'Email already in use',
+  //      });
+  //    }
+  //  }
 
-    //generating password:
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(data.password, salt);
+  //  //generating password:
+  //  const salt = await bcrypt.genSalt();
+  //  const hashedPassword = await bcrypt.hash(data.password, salt);
 
-    const id = crypto.randomBytes(54);
-    const id2 = id.toString('hex');
-    console.log('login');
-    const { password, googleRecaptchaToken, ...rest } = data;
+  //  const id = crypto.randomBytes(54);
+  //  const id2 = id.toString('hex');
+  //  console.log('login');
+  //  const { password, googleRecaptchaToken, ...rest } = data;
 
-    const response = await this.prisma.openmeshExpertUser.create({
-      data: {
-        password: hashedPassword,
-        hashConfirmEmail: id2,
-        confirmedEmail: false,
-        registrationByVerifiedContributor: true,
-        ...rest,
-      },
-    });
+  //  const response = await this.prisma.openmeshExpertUser.create({
+  //    data: {
+  //      password: hashedPassword,
+  //      hashConfirmEmail: id2,
+  //      confirmedEmail: false,
+  //      registrationByVerifiedContributor: true,
+  //      ...rest,
+  //    },
+  //  });
 
-    const jwt = await this.jwtService.signAsync({ id: response.id });
+  //  const jwt = await this.jwtService.signAsync({ id: response.id });
 
-    // await this.emailSenderService.emailConfirmacaoConta(id2, data.email);
+  //  // await this.emailSenderService.emailConfirmacaoConta(id2, data.email);
 
-    const userFinalReturn = {
-      email: response.email,
-      sessionToken: jwt,
-    };
+  //  const userFinalReturn = {
+  //    email: response.email,
+  //    sessionToken: jwt,
+  //  };
 
-    await this.openmeshExpertsEmailManagerService.emailConfirmationAccountVC(
-      response.email,
-      id2,
-    );
+  //  await this.openmeshExpertsEmailManagerService.emailConfirmationAccountVC(
+  //    response.email,
+  //    id2,
+  //  );
 
-    //this.financeService.KYBBigData(response.id);
-    return userFinalReturn;
-  }
+  //  //this.financeService.KYBBigData(response.id);
+  //  return userFinalReturn;
+  //}
 
   async convertToCSV(users: any[]) {
     let csvData = '';
@@ -489,34 +486,34 @@ export class OpenmeshExpertsAuthService {
   }
 
   //sends email to recover password
-  async emailRecoverPassword(data: EmailRecoverPasswordDTO) {
-    const userExists = await this.prisma.openmeshExpertUser.findFirst({
-      where: {
-        email: data.email,
-      },
-    });
-    if (!userExists) {
-      console.log('User does not exists');
-      return;
-    }
+  // async emailRecoverPassword(data: EmailRecoverPasswordDTO) {
+  //   const userExists = await this.prisma.openmeshExpertUser.findFirst({
+  //     where: {
+  //       email: data.email,
+  //     },
+  //   });
+  //   if (!userExists) {
+  //     console.log('User does not exists');
+  //     return;
+  //   }
 
-    const id = crypto.randomBytes(58);
-    const id2 = id.toString('hex');
+  //   const id = crypto.randomBytes(58);
+  //   const id2 = id.toString('hex');
 
-    await this.prisma.recoverPassword.create({
-      data: {
-        openmeshExpertUserId: userExists.id,
-        email: userExists.email,
-        txid: id2,
-        timeStamp: String(Math.round(Date.now() / 1000)),
-      },
-    });
+  //   await this.prisma.recoverPassword.create({
+  //     data: {
+  //       openmeshExpertUserId: userExists.id,
+  //       email: userExists.email,
+  //       txid: id2,
+  //       timeStamp: String(Math.round(Date.now() / 1000)),
+  //     },
+  //   });
 
-    await this.openmeshExpertsEmailManagerService.emailRecPassword(
-      userExists.email,
-      id2,
-    );
-  }
+  //   await this.openmeshExpertsEmailManagerService.emailRecPassword(
+  //     userExists.email,
+  //     id2,
+  //   );
+  // }
 
   //recover the password, after sending the email and the user putting the new password.
   async recoverPassword(data: RecoverPasswordDTO) {

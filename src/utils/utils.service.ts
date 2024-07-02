@@ -37,14 +37,9 @@ export class UtilsService {
     this.web3UrlProviderEthereum,
   );
 
-  viewPrivateKey = process.env.VIEW_PRIVATE_KEY;
   priceFeedETHUSDAddress =
     process.env.CHAINLINK_PRICE_FEED_ETHUSD_CONTRACT_ADDRESS;
 
-  apiCovalentBase = process.env.COVALENT_API_BASE_URL;
-  apiCovalentKey = process.env.COVALENT_API_KEY;
-  usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS;
-  usdtTokenAddress = process.env.USDT_TOKEN_ADDRESS;
   wEthTokenAddress = process.env.WETH_TOKEN_ADDRESS;
   // webhookSigningKey = ''
   environment = process.env.ENVIRONMENT;
@@ -112,153 +107,6 @@ export class UtilsService {
     }
   }
 
-  //example of payment:   "payments": [    {      "tokenContract": "0x6eFbB027a552637492D827524242252733F06916",      "amount": "1000000000000000000",  "decimals": "18"    }  ],
-  async getEstimateBudgetToken(payments) {
-    let budget = '0';
-    if (this.environment === 'PROD') {
-      try {
-        for (let i = 0; i < payments.length; i++) {
-          //if its a weth token, get the price, else it is a stable coin 1:1 so the valueToken should be 1;
-          let valueToken = '1';
-          if (payments[i].tokenContract === this.wEthTokenAddress) {
-            console.log('found one weth address');
-            // eslint-disable-next-line prettier/prettier
-            valueToken = String(await this.getWETHPriceTokensFromChailink(this.priceFeedETHUSDAddress));
-          }
-
-          const totalTokens = new Decimal(payments[i].amount).div(
-            new Decimal(new Decimal(10).pow(new Decimal(payments[i].decimals))),
-          );
-          console.log('total tokens 152');
-          console.log(totalTokens);
-          console.log('tokenVALUE');
-          console.log('tokenValue: ' + valueToken);
-          budget = new Decimal(budget)
-            .plus(new Decimal(totalTokens).mul(new Decimal(valueToken)))
-            .toFixed(2);
-        }
-      } catch (err) {
-        console.log('error catching estimated budget value');
-        console.log(err);
-      }
-    } else {
-      try {
-        console.log('doing estimated budget here');
-        //if its a dev environment, just consider every token to be a stablecoin 1:1
-        for (let i = 0; i < payments.length; i++) {
-          const totalTokens = new Decimal(payments[i].amount).div(
-            new Decimal(new Decimal(10).pow(new Decimal(payments[i].decimals))),
-          );
-          console.log('total tokens');
-          console.log(totalTokens);
-          budget = new Decimal(budget)
-            .plus(new Decimal(totalTokens))
-            .toFixed(2);
-        }
-      } catch (err) {
-        console.log('error catching estimated budget value here');
-        console.log(err);
-      }
-    }
-    console.log('budget to return');
-    console.log('budget');
-    return budget;
-  }
-
-  async getDecimalsFromPaymentsToken(payments) {
-    console.log('getting decimals');
-    console.log(payments);
-    const newPayments = payments.map((payment) => ({ ...payment })); // creating a deep copy of the payments
-    const finalPayments = [];
-
-    const walletEther = new ethers.Wallet(this.viewPrivateKey);
-    const connectedWallet = walletEther.connect(this.web3Provider);
-
-    for (let i = 0; i < payments.length; i++) {
-      const newcontract = new ethers.Contract(
-        payments[i].tokenContract,
-        erc20ContractABI,
-        this.web3Provider,
-      );
-      const contractSigner = await newcontract.connect(connectedWallet);
-
-      let decimals = 18;
-      await contractSigner.decimals().then(function (response) {
-        decimals = response;
-      });
-      console.log('the decimal from token:');
-      console.log(decimals);
-      if (decimals) {
-        newPayments[i].decimals = String(Number(decimals)); // modifying the deep copy
-        console.log('look here the payments');
-        console.log(newPayments[i]);
-        finalPayments.push({
-          tokenContract: newPayments[i].tokenContract,
-          amount: String(Number(newPayments[i].amount)),
-          decimals: newPayments[i].decimals,
-        });
-      }
-    }
-    // returning the newPayments with the correctly decimals
-    return finalPayments;
-  }
-
-  //function used internaly to get all  the price from the tokens allowed to be set as payments on the protocol (so we can give to the user the estimate amount of dollars the task is worth it)
-  public async getWETHPriceTokens(tokenAddress: string): Promise<number> {
-    const url = `${this.apiCovalentBase}/pricing/historical_by_addresses_v2/matic-mainnet/USD/${tokenAddress}/?key=${this.apiCovalentKey}`;
-    let response = 0;
-
-    const config = {
-      method: 'get',
-      url,
-    };
-    try {
-      await axios(config).then(function (dado) {
-        console.log('the data');
-        response = dado.data.data[0].prices[0].price;
-      });
-      console.log('eth price');
-      console.log(url);
-    } catch (err) {
-      console.log('error api covalent price');
-      console.log(err);
-    }
-    console.log('the value to be returned from the wethPrice: ' + response);
-    return response;
-  }
-
-  //using decentralized ways to get prices
-  //docs: https://docs.chain.link/data-feeds/using-data-feeds https://docs.chain.link/data-feeds/price-feeds/addresses
-  //contract example: https://etherscan.io/address/0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c#readContract
-  public async getWETHPriceTokensFromChailink(
-    tokenAddress: string,
-  ): Promise<number> {
-    let response = 0;
-    try {
-      const walletEther = new ethers.Wallet(this.viewPrivateKey);
-      const connectedWallet = walletEther.connect(this.web3ProviderEthereum);
-      const newcontract = new ethers.Contract(
-        tokenAddress,
-        chainlinkPriceFeedABI,
-        this.web3ProviderEthereum,
-      );
-      const contractSigner = await newcontract.connect(connectedWallet);
-      //getting price
-      const value = await contractSigner.latestRoundData();
-
-      //getting chainlink contract decimals (not always the same as the token we are querying)
-      const decimals = await contractSigner.decimals();
-      const price = Number(value[1]) / 10 ** Number(decimals);
-
-      console.log('the price');
-      console.log(price);
-      response = price;
-    } catch (err) {
-      console.log('error api chailink price');
-      console.log(err);
-    }
-    return response;
-  }
   //function used to update the job success rating of a user
   public async updatesJobSuccess(userAddress: string): Promise<any> {
     console.log('updating job success');

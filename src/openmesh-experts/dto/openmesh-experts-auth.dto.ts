@@ -625,17 +625,17 @@ export class ConfirmEmailDTO {
   id: string;
 }
 
-export class EmailRecoverPasswordDTO {
-  @IsNotEmpty()
-  @IsEmail()
-  @ApiProperty({
-    minLength: 8,
-    maxLength: 500,
-    description: 'Email to whom the recover password link must be send',
-    example: 'agame@gmail.com',
-  })
-  email: string;
-}
+// export class EmailRecoverPasswordDTO {
+//   @IsNotEmpty()
+//   @IsEmail()
+//   @ApiProperty({
+//     minLength: 8,
+//     maxLength: 500,
+//     description: 'Email to whom the recover password link must be send',
+//     example: 'agame@gmail.com',
+//   })
+//   email: string;
+// }
 
 export class RecoverPasswordDTO {
   @IsNotEmpty()

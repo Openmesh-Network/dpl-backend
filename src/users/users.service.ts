@@ -22,8 +22,6 @@ import { UtilsService } from '../utils/utils.service';
 import {
   EditUserDTO,
   GetUserDTO,
-  GithubLoginDTO,
-  VerifiedContributorSubmissionDTO,
 } from './dto/users.dto';
 
 @Injectable()
@@ -36,17 +34,11 @@ export class UsersService {
   //setting variables:
   web3UrlProvider = process.env.WEB3_URL_PROVIDER;
   web3Provider = new ethers.providers.JsonRpcProvider(this.web3UrlProvider);
-  viewPrivateKey = process.env.VIEW_PRIVATE_KEY;
   taskContractAddress = process.env.TASK_CONTRACT_ADDRESS;
-  ipfsBaseURL = process.env.IPFS_BASE_URL;
-  pinataApiKey = process.env.PINATA_API_KEY;
-  pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
   environment = process.env.ENVIRONMENT;
   usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS;
   usdtTokenAddress = process.env.USDT_TOKEN_ADDRESS;
   wEthTokenAddress = process.env.WETH_TOKEN_ADDRESS;
-  githubClientId = process.env.GITHUB_CLIENT_ID;
-  githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
 
   statusOptions = ['open', 'active', 'completed'];
 
@@ -282,151 +274,6 @@ export class UsersService {
     }
   }
 
-  //Same logic as to edit a user profile
-  async verifiedContributorSumission(data: VerifiedContributorSubmissionDTO) {
-    console.log('editing user');
-    const userExists = await this.prisma.user.findFirst({
-      where: {
-        address: data.address,
-      },
-    });
-
-    const { signature, ...verifyData } = data;
-    if (!userExists) {
-      console.log('user not found');
-      console.log('data to be hashed');
-      console.log(verifyData);
-      console.log(JSON.stringify(verifyData));
-
-      //verifying signature
-      const hash = this.hashObject(verifyData);
-      console.log(hash);
-      const finalHash = `0x${hash}`;
-      const isVerified = await this.verifiesSignedMessage(
-        finalHash,
-        data.address,
-        data.signature,
-      );
-      if (!isVerified) {
-        throw new BadRequestException('Invalid signature', {
-          cause: new Error(),
-          description: 'Invalid signature',
-        });
-      }
-      console.log('message validated');
-      const { signature, nonce, ...finalData } = data;
-      console.log('the data');
-      console.log(finalData);
-
-      //verifying github access token
-      console.log('verifying github data');
-      const githubData = await this.getGithubUserData(
-        finalData.githubAccessToken,
-      );
-
-      //creating the user and its verified contributor submission.
-      const user = await this.prisma.user.create({
-        data: {
-          address: finalData.address,
-          joinedSince: String(Math.floor(Date.now() / 1000)),
-        },
-      });
-      await this.prisma.verifiedContributorSubmission.create({
-        data: {
-          userId: user.id,
-          description: finalData.description,
-          links: finalData.links,
-          githubLogin: githubData['login'],
-          githubHTMLUrl: githubData['html_url'],
-          githubId: String(githubData['id']),
-          githubName: githubData['name'],
-          githubEmail: githubData['email'],
-          githubAccessToken: finalData.githubAccessToken,
-        },
-      });
-    } else {
-      console.log('user found');
-      if (data.nonce !== userExists.updatesNonce) {
-        console.log('invalid nonce');
-        throw new BadRequestException('Invalid nonce', {
-          cause: new Error(),
-          description: 'Invalid nonce',
-        });
-      }
-
-      //checking if submission already exists
-      const submission =
-        await this.prisma.verifiedContributorSubmission.findMany({
-          where: {
-            userId: userExists.id,
-          },
-        });
-      if (submission.length > 0) {
-        console.log('submission already exists');
-        throw new BadRequestException('submission already exists', {
-          cause: new Error(),
-          description: 'submission already exists',
-        });
-      }
-
-      console.log('data to be hashed');
-      console.log(verifyData);
-      console.log(JSON.stringify(verifyData));
-      //verifying signature
-      const hash = this.hashObject(verifyData);
-      console.log(hash);
-      const finalHash = `0x${hash}`;
-      const isVerified = await this.verifiesSignedMessage(
-        finalHash,
-        data.address,
-        data.signature,
-      );
-      if (!isVerified) {
-        throw new BadRequestException('Invalid signature', {
-          cause: new Error(),
-          description: 'Invalid signature',
-        });
-      }
-      console.log('message validated');
-      const { signature, nonce, ...finalData } = data;
-      console.log('the data');
-      console.log(finalData);
-
-      //verifying github access token
-      console.log('verifying github data');
-      const githubData = await this.getGithubUserData(
-        finalData.githubAccessToken,
-      );
-
-      //creating its verified contributor submission.
-      const updatesNonce = String(Number(userExists.updatesNonce) + 1);
-      console.log('the data');
-      console.log(finalData);
-      await this.prisma.user.update({
-        where: {
-          id: userExists.id,
-        },
-        data: {
-          updatesNonce,
-        },
-      });
-
-      await this.prisma.verifiedContributorSubmission.create({
-        data: {
-          userId: userExists.id,
-          description: finalData.description,
-          links: finalData.links,
-          githubLogin: githubData['login'],
-          githubHTMLUrl: githubData['html_url'],
-          githubId: String(githubData['id']),
-          githubName: githubData['name'],
-          githubEmail: githubData['email'],
-          githubAccessToken: finalData.githubAccessToken,
-        },
-      });
-    }
-  }
-
   async verifiesSignedMessage(hash: any, address: string, signature: string) {
     const signer = ethers.utils.verifyMessage(hash, signature);
     console.log('the signer');
@@ -440,79 +287,5 @@ export class UsersService {
     const hash = createHash('sha256');
     hash.update(str);
     return hash.digest('hex');
-  }
-
-  //example of return: {	"login": "bruno353",	"id": 82957886,	"node_id": "MDQ6VXNlcjgyOTU3ODg2",	"avatar_url": "https://avatars.githubusercontent.com/u/82957886?v=4",	"gravatar_id": "",	"url": "https://api.github.com/users/bruno353",	"html_url": "https://github.com/bruno353",	"followers_url": "https://api.github.com/users/bruno353/followers",	"following_url": "https://api.github.com/users/bruno353/following{/other_user}",	"gists_url": "https://api.github.com/users/bruno353/gists{/gist_id}",	"starred_url": "https://api.github.com/users/bruno353/starred{/owner}{/repo}",	"subscriptions_url": "https://api.github.com/users/bruno353/subscriptions",	"organizations_url": "https://api.github.com/users/bruno353/orgs",	"repos_url": "https://api.github.com/users/bruno353/repos",	"events_url": "https://api.github.com/users/bruno353/events{/privacy}",	"received_events_url": "https://api.github.com/users/bruno353/received_events",	"type": "User",	"site_admin": false,	"name": "Bruno Santos",	"company": null,	"blog": "",	"location": "Brazil",	"email": "tibiapro58@gmail.com",	"hireable": true,	"bio": "Dev",	"twitter_username": null,	"public_repos": 44,	"public_gists": 1,	"followers": 6,	"following": 6,	"created_at": "2021-04-21T14:45:39Z",	"updated_at": "2023-07-25T00:35:06Z"}
-  async githubLogin(data: GithubLoginDTO) {
-    const url = `https://github.com/login/oauth/access_token?client_id=${this.githubClientId}&client_secret=${this.githubClientSecret}&code=${data.code}`;
-
-    const config = {
-      method: 'post',
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    };
-
-    let dado;
-
-    try {
-      await axios(config).then(function (response) {
-        console.log('github access token');
-
-        dado = response.data;
-        console.log(dado);
-      });
-    } catch (err) {
-      console.log('Error during Github connection');
-      console.log(err);
-      console.log(url);
-      throw new BadRequestException('Error during Github connection', {
-        cause: new Error(),
-        description: 'Error during Github connection',
-      });
-    }
-
-    const userData = await this.getGithubUserData(dado.access_token);
-
-    userData['github_access_token'] = dado.access_token;
-
-    return userData;
-  }
-
-  async getGithubUserData(accessToken: string) {
-    const url = `https://api.github.com/user`;
-
-    const config = {
-      method: 'get',
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-    };
-
-    let dado;
-
-    console.log('a chamada');
-    console.log(config);
-
-    try {
-      await axios(config).then(function (response) {
-        console.log('github data');
-        console.log('deu certo');
-        dado = response.data;
-      });
-    } catch (err) {
-      console.log('Error during Github fetch data');
-      // console.log(err);
-      throw new BadRequestException('Error during Github fetch data', {
-        cause: new Error(),
-        description: 'Error during Github fetch data',
-      });
-    }
-
-    return dado;
   }
 }

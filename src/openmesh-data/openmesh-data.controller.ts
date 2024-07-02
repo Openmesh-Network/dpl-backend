@@ -44,7 +44,6 @@ export class OpenmeshDataController {
   ) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
-  deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 
   @ApiOperation({
     summary: 'Return the datasets',
@@ -88,56 +87,6 @@ export class OpenmeshDataController {
     return this.openmeshTemplateProducts.getTemplateProducts(data);
   }
 
-  @ApiOperation({
-    summary: 'Upload the datasets',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @ApiHeader({
-    name: 'x-deeeplink-team-signature',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('uploadDatasets')
-  @ApiBody({ type: [UploadDatasetsDTO] })
-  uploadDatasets(@Body() data: UploadDatasetsDTO[], @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    if (
-      String(req.headers['x-deeeplink-team-signature']) !==
-      this.deeplinkSignature
-    )
-      throw new UnauthorizedException();
-    return this.openmeshDataService.uploadDatasets(data);
-  }
-
-  @ApiOperation({
-    summary: 'Upload the datasets',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @ApiHeader({
-    name: 'x-deeeplink-team-signature',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('uploadTemplateProducts')
-  uploadTemplateProducts(@Body() data: any[], @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    if (
-      String(req.headers['x-deeeplink-team-signature']) !==
-      this.deeplinkSignature
-    )
-      throw new UnauthorizedException();
-    return this.openmeshTemplateProducts.uploadTemplateProducts(data);
-  }
-  // @Post('updateLinksDataProducts')
-  // updateLinksDataProducts(@Body() data: any) {
-  //   return this.openmeshDataService.updateLinksDataProducts(data);
-  // }
 
   @ApiOperation({
     summary: 'Return the templates data',

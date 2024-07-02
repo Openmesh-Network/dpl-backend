@@ -30,7 +30,6 @@ import {
   ConfirmEmailDTO,
   CreateOpenmeshExpertUserDTO,
   CreateOpenmeshExpertVerifiedContributorUserDTO,
-  EmailRecoverPasswordDTO,
   GetUserNonceDTO,
   LoginDTO,
   LoginResponseDTO,
@@ -39,7 +38,6 @@ import {
   RecoverPasswordIsValidDTO,
   UpdateOpenmeshExpertUserDTO,
 } from './dto/openmesh-experts-auth.dto';
-import { OpenmeshExpertsEmailManagerService } from './openmesh-experts-email-manager.service';
 
 @ApiTags(
   'Openmesh-experts - Companies / individuals that qualify to become an openmesh expert endpoints.',
@@ -48,45 +46,9 @@ import { OpenmeshExpertsEmailManagerService } from './openmesh-experts-email-man
 export class OpenmeshExpertsController {
   constructor(
     private readonly openmeshExpertsAuthService: OpenmeshExpertsAuthService,
-    private readonly openmeshExpertsEmailManagerService: OpenmeshExpertsEmailManagerService,
   ) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
-  deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
-
-  @ApiOperation({
-    summary: 'Create an openmesh user',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('createUser')
-  createUser(@Body() data: CreateOpenmeshExpertUserDTO, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.openmeshExpertsAuthService.createUser(data);
-  }
-
-  @ApiOperation({
-    summary:
-      'Create an openmesh user if he wants to become a verified contributor',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('createUserByVerifiedContributor')
-  createUserByVerifiedContributor(
-    @Body() data: CreateOpenmeshExpertVerifiedContributorUserDTO,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.openmeshExpertsAuthService.createUserByVerifiedContributor(
-      data,
-    );
-  }
 
   @ApiOperation({
     summary: 'Login an openmesh user',
@@ -222,22 +184,22 @@ export class OpenmeshExpertsController {
     return this.openmeshExpertsAuthService.confirmEmail(data);
   }
 
-  @ApiOperation({
-    summary: 'Sends an email to recover user password',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('emailRecoverPassword')
-  emailRecoverPassword(
-    @Body() data: EmailRecoverPasswordDTO,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.openmeshExpertsAuthService.emailRecoverPassword(data);
-  }
+  // @ApiOperation({
+  //   summary: 'Sends an email to recover user password',
+  // })
+  // @ApiHeader({
+  //   name: 'X-Parse-Application-Id',
+  //   description: 'Token mandatory to connect with the app',
+  // })
+  // @Post('emailRecoverPassword')
+  // emailRecoverPassword(
+  //   @Body() data: EmailRecoverPasswordDTO,
+  //   @Req() req: Request,
+  // ) {
+  //   const apiToken = String(req.headers['x-parse-application-id']);
+  //   if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+  //   return this.openmeshExpertsAuthService.emailRecoverPassword(data);
+  // }
 
   @ApiOperation({
     summary:
@@ -269,26 +231,6 @@ export class OpenmeshExpertsController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.openmeshExpertsAuthService.recoverPasswordIdIsValid(data);
-  }
-
-  @ApiOperation({
-    summary: 'Get users csv',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @ApiResponse({ status: 200, type: LoginResponseDTO })
-  @Get('getUsersCSV')
-  getUsersCSV(@Req() req: Request, @Res() response: Response) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    if (
-      String(req.headers['x-deeeplink-team-signature']) !==
-      this.deeplinkSignature
-    )
-      throw new UnauthorizedException();
-    return this.openmeshExpertsAuthService.getUsersCSV(response);
   }
 
   // @ApiOperation({
