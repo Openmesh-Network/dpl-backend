@@ -39,8 +39,6 @@ export class UsersService {
   viewPrivateKey = process.env.VIEW_PRIVATE_KEY;
   taskContractAddress = process.env.TASK_CONTRACT_ADDRESS;
   ipfsBaseURL = process.env.IPFS_BASE_URL;
-  pinataApiKey = process.env.PINATA_API_KEY;
-  pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
   environment = process.env.ENVIRONMENT;
   usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS;
   usdtTokenAddress = process.env.USDT_TOKEN_ADDRESS;
