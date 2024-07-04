@@ -102,7 +102,7 @@ export class XnodesService {
       `0x7703d5753c54852d4249f9784a3e8a6eea08e1dd`,
       `0xA4a336783326241acFf520D91eb8841Ad3B9BD1a`,
       `0x87d795cbb0CABd0A68Df54E6a01033046919bA43`,
-      `0xA45712c2724b059289F1bf5Cf098441a8e6D195c`,
+      '0x00AbF21a1f81d348B848a035951396Db96f28b3a',
     ];
 
     let isWhitelisted = false;
