@@ -212,7 +212,7 @@ export class XnodesService {
           // Do round-robbin with hivelocity servers instead.
           const serverIds = process.env.HIVELOCITY_SERVER_IDS.split(",")
 
-          if (serverIds.length < 2) {
+          if (serverIds.length < 3) {
             console.error("Need to specify hivelocity server ids. Is HIVELOCITY_SERVER_IDS env var not set?")
             throw new Error("No available servers, check dpl logs.")
           }
@@ -221,6 +221,8 @@ export class XnodesService {
           let index = 0
           if (user.web3Address == "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5") {
             index = 1
+          } else if (user.web3Address == "0xA4a336783326241acFf520D91eb8841Ad3B9BD1a") {
+            index = 2
           }
 
           const serverId = serverIds[index]
