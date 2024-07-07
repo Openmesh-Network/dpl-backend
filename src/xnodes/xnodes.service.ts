@@ -24,7 +24,7 @@ import {
 } from 'crypto' // NodeJS native crypto lib
 
 import { PrismaService } from '../database/prisma.service';
-import { Request, response } from 'express';
+import { Request, Response } from 'express';
 import axios from 'axios';
 import { UtilsService } from '../utils/utils.service';
 import { OpenmeshExpertsAuthService } from 'src/openmesh-experts/openmesh-experts-auth.service';
@@ -411,26 +411,56 @@ export class XnodesService {
     }
   }
 
+  generate_hmac(accessToken, message) {
+    let preSharedKey = createSecretKey(accessToken, 'base64')
+    const computedHmac = createHmac('sha256', preSharedKey).update(message, 'utf8').digest('hex');
+    return computedHmac
+  }
+
+  verifyHmac(accessToken, message, claimedHmac) {
+    // accessToken is passed as base64
+    console.log("Computing hmac for message:", message)
+    let realHmac = this.generate_hmac(accessToken, message)
+    let verified = realHmac === claimedHmac
+    console.log("Hmac computed: ", realHmac, "matched:", verified)
+    return verified
+  }
+
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); 
 
-    console.log("About to get services for node. ID: ", dataBody.id, ", accessToken: ", accessToken)
-
+    // XXX: Needs anti-spam measures.
     const node = await this.prisma.deployment.findFirst({
       where: {
-        AND: [
-          {
-            id: dataBody.id,
-          },
-          {
-            // Hmac validation
-            accessToken: accessToken
-          }
-        ]
+        id: dataBody.id,
       }
     })
+    console.log("Got services for node. ID: ", node.id, ", accessToken: ", node.accessToken)
+    let preSharedKey = Buffer.from(node.accessToken, 'base64').toString('hex')
+    console.log("Decoded access token: ", preSharedKey)
+    
 
-    return node.services
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      let expiry = new Date().getTime() + 30 * 1000; // 30 seconds
+      let message = JSON.stringify(
+        {
+          "xnode_config": JSON.parse(node.services),
+          "expiry": expiry
+        }
+      )
+      let msg_hmac = this.generate_hmac(node.accessToken, message)
+      console.log("Creating hmac for", message)
+      console.log(msg_hmac)
+      return {
+        message,
+        "hmac": msg_hmac
+      }
+
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
   }
 
   async pushXnodeServices(dataBody: PushXnodeServiceDto, req: Request) {
@@ -466,35 +496,38 @@ export class XnodesService {
   }
 
   async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     const { id, ...data} = dataBody;
 
-    try {
-      await this.prisma.deployment.updateMany({
-        where: {
-          AND: [
-            {
-              id: id,
-            },
-            {
-              // TODO: Inlcude Hmac validation.
-              accessToken: accessToken
-            }
-          ]
-        },
-        data: {
-          heartbeatData: JSON.stringify(data),
-        }
-      })
-    } catch(err) {
-      throw new BadRequestException('Failed to authenticate', {
-        cause: new Error(),
-        description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
-      });
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      try {
+        await this.prisma.deployment.updateMany({
+          where: {
+            id: id,
+          },
+          data: {
+            heartbeatData: JSON.stringify(data),
+          }
+        })
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
     }
   }
-  // TODO: Can get information from node_information/<xnode-unit-token-id>
+  // TODO: Can get information from XU_URL/node_information/<xnode-unit-token-id>
   //async fetch_unit_information(deployment: ) {
     // STUB
   //}
