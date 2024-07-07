@@ -340,9 +340,12 @@ export class XnodesService {
           headers.set('Content-Type', 'application/json')
           let jsondata = JSON.stringify({
             // get the walletAddress for the user from prisma
-            WalletAddress: user.walletAddress,
-            XNODE_UUID: xnodeId,
-            XNODE_ACCESS_TOKEN: xnodeAccessToken,
+            // WalletAddress: user.walletAddress,
+            xnodeId: xnodeId,
+            xnodeAccessToken: xnodeAccessToken,
+            // XXX: Change this in production and dev.
+            xnodeConfigRemote: "https://dpl-backend-staging.up.railway.app",
+            nftActivationTime: nftMintDate,
           });
 
           // Attempt provisioning (should only be done once) XXX
@@ -362,16 +365,16 @@ export class XnodesService {
             console.log(response)
             throw new Error(`Error! status: ${response.status}`);
           }
-          /*
-          const provision_unit_response = await response.json();
-          if (provision_unit_response == "Deployed into hivelocity") {
-            xnodeData.provider = "hivelocity"; // Why?
-          } else if (provision_unit_response == "Internal server error") {
-            throw new Error(`Unable to provision Xnode Unit`);
+
+          let body = await response.json()
+
+          if (response.ok) {
+            ipAddress = body.ipAddress
+            console.log("")
           } else {
-            console.log("Fatal provisioning error.");
+            console.log("Couldn't provision unit: " + body.message)
+            throw new Error(`Unable to provision Xnode Unit`);
           }
-          */
         }
       }
 
