@@ -28,20 +28,20 @@ enum XnodeEnum {
 
 export class CreateXnodeDto {
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(100)
   @IsString()
   @ApiProperty({
     description: 'The xnode name',
-    maxLength: 1000,
+    maxLength: 100,
   })
   name: string;
 
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(100)
   @IsString()
   @ApiProperty({
     description: 'The xnode location',
-    maxLength: 1000,
+    maxLength: 100,
   })
   location: string;
 
@@ -97,11 +97,11 @@ export class CreateXnodeDto {
 
 export class XnodeHeartbeatDto {
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(100)
   @IsString()
   @ApiProperty({
     description: 'The xnode\'s id',
-    maxLength: 1000,
+    maxLength: 100,
   })
   id: string;
 
@@ -157,31 +157,31 @@ export class XnodeHeartbeatDto {
 
 export class GetXnodeServiceDto {
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(5000)
   @IsString()
   @ApiProperty({
     description: 'The xnode\'s id',
-    maxLength: 1000,
+    maxLength: 5000,
   })
   id: string;
 }
 
 export class PushXnodeServiceDto {
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(5000)
   @IsString()
   @ApiProperty({
     description: 'The xnode\'s id',
-    maxLength: 1000,
+    maxLength: 5000,
   })
   id: string;
 
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(5000)
   @IsString()
   @ApiProperty({
     description: 'The xnode\'s services',
-    maxLength: 1000,
+    maxLength: 5000,
   })
   services: string;
 }
@@ -192,7 +192,7 @@ export class UpdateXnodeDto {
   @MaxLength(1000)
   @ApiProperty({
     description: 'Id of the Xnode',
-    maxLength: 1000,
+    maxLength: 100,
   })
   xnodeId: string;
 
@@ -201,7 +201,7 @@ export class UpdateXnodeDto {
   @IsString()
   @ApiProperty({
     description: 'The Xnode name',
-    maxLength: 1000,
+    maxLength: 100,
   })
   name: string;
 

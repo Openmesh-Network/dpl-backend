@@ -66,6 +66,7 @@ export class XnodesService {
   );
   XU_CONTROLLER_URL = process.env.XU_CONTROLLER_URL;
   XU_CONTROLLER_KEY = process.env.XU_CONTROLLER_KEY;
+  XNODE_API_URL = process.env.XNODE_API_URL;
 
   async createXnode(dataBody: CreateXnodeDto, req: Request) {
     const sessionToken = String(req.headers['x-parse-session-token']);
@@ -343,8 +344,7 @@ export class XnodesService {
             // WalletAddress: user.walletAddress,
             xnodeId: xnodeId,
             xnodeAccessToken: xnodeAccessToken,
-            // XXX: Change this in production and dev.
-            xnodeConfigRemote: "https://dpl-backend-staging.up.railway.app",
+            xnodeConfigRemote: this.XNODE_API_URL,
             nftActivationTime: nftMintDate,
           });
 
@@ -527,16 +527,16 @@ export class XnodesService {
       throw new Error("Invalid HMAC, is your access token correct?")
     }
   }
-  // TODO: Can get information from XU_URL/node_information/<xnode-unit-token-id>
+  // TODO: Can get information from XU_URL/info/<xnode-unit-token-id>
   //async fetch_unit_information(deployment: ) {
     // STUB
   //}
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
     // TODO: Double check this function works as expected.
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
+      sessionToken,
     );
 
     const xnodes = await this.prisma.deployment.findFirst({
@@ -566,9 +566,9 @@ export class XnodesService {
   }
 
   async getXnode(dataBody: GetXnodeDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
+      sessionToken,
     );
 
     return await this.prisma.deployment.findFirst({
@@ -673,9 +673,9 @@ export class XnodesService {
     dataBody: StoreXnodeSigningMessageDataDTO,
     req: Request,
   ) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
+      sessionToken,
     );
 
     const xnodeExists = await this.prisma.xnode.findFirst({
