@@ -527,7 +527,7 @@ export class XnodesService {
       throw new Error("Invalid HMAC, is your access token correct?")
     }
   }
-  // TODO: Can get information from XU_URL/node_information/<xnode-unit-token-id>
+  // TODO: Can get information from XU_URL/info/<xnode-unit-token-id>
   //async fetch_unit_information(deployment: ) {
     // STUB
   //}
