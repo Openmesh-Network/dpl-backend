@@ -362,8 +362,11 @@ export class XnodesService {
 
           const response = await fetch(provisionUrl, provisionRequest);
           if (!response.ok) {
-            console.log(response)
-            throw new Error(`Error! status: ${response.status}`);
+            // XXX: Print the body.
+            let message = await response.json()
+            console.log(message)
+
+            throw new Error(`Error! status: ${response.status}, message: ${message}`);
           }
 
           let body = await response.json()
