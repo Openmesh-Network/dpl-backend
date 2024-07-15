@@ -375,6 +375,7 @@ export class XnodesService {
           ipAddress: ipAddress,
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
+          status: "booting",
           ...xnodeData,
         },
       });
@@ -524,14 +525,14 @@ export class XnodesService {
       sessionToken,
     );
 
-    const xnodes = await this.prisma.deployment.findFirst({
+    const xnode = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.xnodeId,
         openmeshExpertUserId: user.id,
       },
     });
 
-    if (!xnodes) {
+    if (!xnode) {
       throw new BadRequestException('Xnode not found', {
         cause: new Error(),
         description: 'Xnode not found',
@@ -540,8 +541,16 @@ export class XnodesService {
 
     const { xnodeId, ...finalBody } = dataBody;
 
+
+    let status = xnode.status
+
+    if (xnode.status == "booting") {
+      status = "booted"
+    }
+
     return await this.prisma.deployment.update({
       data: {
+        status: status,
         ...finalBody,
       },
       where: {
