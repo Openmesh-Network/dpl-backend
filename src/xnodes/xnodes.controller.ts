@@ -31,8 +31,6 @@ import {
   XnodeHeartbeatDto,
   GetXnodeServiceDto,
   PushXnodeServiceDto,
-  StoreXnodeData,
-  StoreXnodeSigningMessageDataDTO,
   UpdateXnodeDto,
 } from './dto/xnodes.dto';
 import { TestingService } from './testing.service';
@@ -90,25 +88,6 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Store xnode signing message',
-    description:
-      'If it is a validator, we request the user to sign a message with its wallet so we can know which wallet we are going to mint tokens of staking - the message signed here is: "I want to participate in the Validator beta"',
-  })
-  @ApiHeader({
-    name: 'x-deeeplink-team-signature',
-    description: 'Private token to auth',
-  })
-  @Post('storeXnodeSigningMessage')
-  storeXnodeSigningMessage(
-    @Body() data: StoreXnodeSigningMessageDataDTO,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.storeXnodeSigningMessage(data, req);
-  }
-
-  @ApiOperation({
     summary: 'Update a xnode',
   })
   @ApiHeader({
@@ -136,37 +115,6 @@ export class XnodesController {
     return this.xnodesService.getXnode(data, req);
   }
 
-  @ApiOperation({
-    summary: 'Returns general stats and a listing of all nodes validators',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Get('getNodesValidatorsStats')
-  getNodesValidatorsStats(@Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.getNodesValidatorsStats();
-  }
-
-  @ApiOperation({
-    summary:
-      'Returns general stats and a listing of all nodes validators, and also returns the data about a specific xnode',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('getXnodeWithNodesValidatorsStats')
-  getXnodeWithNodesValidatorsStats(
-    @Body() data: GetXnodeDto,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.getXnodeWithNodesValidatorsStats(data);
-  }
 
   @ApiOperation({
     summary: 'Returns all user xnodes',
@@ -181,32 +129,4 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.getXnodes(req);
   }
-  /*
-  @ApiOperation({
-    summary: 'Returns all user xnodes',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Get('teste')
-  teste(@Body() data: any, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.getXnodeDeploymentLog(data.tagId, data.xnodeId);
-  }
-
-  @ApiOperation({
-    summary: 'test',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('test')
-  test(@Body() data: any, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.testingService.createWallet(data.name, data.senha);
-  } */
 }

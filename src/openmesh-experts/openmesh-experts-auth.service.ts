@@ -330,7 +330,7 @@ export class OpenmeshExpertsAuthService {
     const dataToBeHashed = `${data.address}-${user?.updatesNonce || '0'}`;
     const hash = this.utilsService.hashObject(dataToBeHashed);
     const finalHash = `0x${hash}`;
-    const isVerified = await this.utilsService.verifiesSignedMessage(
+    const isVerified = await this.utilsService.verifySignedMessage(
       finalHash,
       data.address,
       data.signature,

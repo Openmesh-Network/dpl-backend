@@ -1,18 +1,10 @@
 /* eslint-disable prefer-const */
 import {
-  ConflictException,
   Injectable,
   BadRequestException,
-  UnauthorizedException,
 } from '@nestjs/common';
-import * as path from 'path';
-import * as Papa from 'papaparse';
-import * as fs from 'fs';
 
-// import { import_ } from '@brillout/import';
 import { ethers } from 'ethers';
-import * as taskContractABI from '../contracts/taskContractABI.json';
-import * as erc20ContractABI from '../contracts/erc20ContractABI.json';
 
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
@@ -24,9 +16,8 @@ import {
 } from 'crypto' // NodeJS native crypto lib
 
 import { PrismaService } from '../database/prisma.service';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import axios from 'axios';
-import { UtilsService } from '../utils/utils.service';
 import { OpenmeshExpertsAuthService } from 'src/openmesh-experts/openmesh-experts-auth.service';
 import {
   ConnectAPI,
@@ -35,19 +26,10 @@ import {
   GetXnodeDto,
   GetXnodeServiceDto,
   PushXnodeServiceDto,
-  StoreXnodeData,
-  StoreXnodeSigningMessageDataDTO,
   UpdateXnodeDto,
 } from './dto/xnodes.dto';
 import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
-import { env, features } from 'process';
-import {
-  defaultSourcePayload,
-  defaultStreamProcessorPayload,
-  defaultWSPayload,
-} from './utils/constants';
-import { generateUUID8, generateUUID16 } from './utils/uuidGenerator';
-import { time } from 'console';
+import { generateUUID16 } from './utils/uuidGenerator';
 
 @Injectable()
 export class XnodesService {
@@ -595,115 +577,6 @@ export class XnodesService {
     });
   }
 
-  async getNodesValidatorsStats() {
-    const nodesListing = await this.prisma.xnode.findMany({
-      where: {
-        type: 'validator',
-      },
-    });
-
-    return {
-      stats: {
-        totalValidators: nodesListing.length,
-        totalStakeAmount: 0,
-        totalAverageReward: 0,
-        averagePayoutPeriod: 'Every 7 days',
-      },
-      nodes: nodesListing,
-    };
-  }
-
-  async getXnodeWithNodesValidatorsStats(data: GetXnodeDto) {
-    const node = await this.prisma.xnode.findFirst({
-      where: {
-        id: data.id,
-      },
-      include: {
-        XnodeClaimActivities: true,
-      },
-    });
-    const nodesListing = await this.prisma.xnode.findMany({
-      where: {
-        type: 'validator',
-      },
-    });
-
-    return {
-      node: node,
-      stats: {
-        totalValidators: nodesListing.length,
-        totalStakeAmount: 0,
-        totalAverageReward: 0,
-        averagePayoutPeriod: 'Every 7 days',
-      },
-      nodes: nodesListing,
-    };
-  }
-  /*
-  async storeXnodeData(data: StoreXnodeData) {
-    console.log('the log data');
-
-    console.log(data);
-    const { buildId, ...finalData } = data;
-
-    const buildIdExists = await this.prisma.xnode.findFirst({
-      where: {
-        buildId,
-      },
-    });
-
-    if (!buildIdExists) {
-      throw new BadRequestException('BuildId not found', {
-        cause: new Error(),
-        description: 'BuildId not found',
-      });
-    }
-    console.log(data);
-
-    //if you receive the data, it also means the node has been deployed succesfully
-    return await this.prisma.xnode.updateMany({
-      where: {
-        buildId,
-      },
-      data: {
-        status: 'Running',
-        ...finalData,
-      },
-    });
-  } */
-
-  async storeXnodeSigningMessage(
-    dataBody: StoreXnodeSigningMessageDataDTO,
-    req: Request,
-  ) {
-    const sessionToken = String(req.headers['x-parse-session-token']);
-    const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      sessionToken,
-    );
-
-    const xnodeExists = await this.prisma.xnode.findFirst({
-      where: {
-        id: dataBody.xnodeId,
-        openmeshExpertUserId: user.id,
-      },
-    });
-
-    if (!xnodeExists)
-      throw new BadRequestException(`Xnode not found`, {
-        cause: new Error(),
-        description: `Xnode not found`,
-      });
-
-    return await this.prisma.xnode.update({
-      where: {
-        id: dataBody.xnodeId,
-      },
-      data: {
-        validatorSignature: dataBody.signedMessage,
-      },
-    });
-  }
-
   async connectEquinixAPI(dataBody: ConnectAPI, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
@@ -1035,15 +908,5 @@ export class XnodesService {
       cause: new Error(),
       description: 'Grafana service deploy failed',
     });
-  }
-
-  async storeDb() {
-    const data = await this.prisma.xnodeClaimActivities.findMany();
-    const csv = Papa.unparse(data);
-
-    const filePath = path.join(__dirname, 'xnodeClaimActivities.csv');
-    fs.writeFileSync(filePath, csv);
-
-    return { message: 'CSV file created', filePath };
   }
 }
