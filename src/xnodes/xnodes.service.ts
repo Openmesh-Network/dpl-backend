@@ -23,6 +23,7 @@ import {
   ConnectAPI,
   CreateXnodeDto,
   XnodeHeartbeatDto,
+  XnodeStatusDto,
   GetXnodeDto,
   GetXnodeServiceDto,
   PushXnodeServiceDto,
@@ -181,138 +182,40 @@ export class XnodesService {
         throw new Error("No NFT mint date.")
       }
 
+      // Check if the NFT is already in the database.
+      {
+        // TODO: Add flag to change this behaviour.
+
+        console.log("Deleting any deployments with a matching nft.")
+
+        // If the NFT is already in the database, we have to delete it.
+        const result = await this.prisma.$transaction(async (prisma) => {
+          let duplicateNftServers = await prisma.deployment.findMany({
+            where: {
+              deploymentAuth: xnodeData.deploymentAuth
+            }
+          })
+
+          console.log("Found: " + duplicateNftServers.length + " servers matching nft. Deleting them now.");
+
+          for (let i = 0; i < duplicateNftServers.length; i++) {
+            await prisma.deployment.deleteMany({
+              where: {
+                deploymentAuth: duplicateNftServers[i].deploymentAuth
+              }
+            })
+          }
+        })
+
+        console.log(result)
+      }
+
       console.log("Nft mint date: ", nftMintDate)
 
       let ipAddress = ""
       {
         if (process.env.MOCK_DEPLOYMENT == "1") {
           console.log("Mock deployment enabled, not talking to any APIs or controller")
-        } else if (process.env.XU_CONTROLLER_ENABLE == "0") {
-          // XXX: Re-enable the xu-controller API code.
-
-          console.log("XU controller disabled, doing round-robbin reset with known hivelocity servers instead.")
-
-          // Do round-robbin with hivelocity servers instead.
-          const serverIds = process.env.HIVELOCITY_SERVER_IDS.split(",")
-
-          if (serverIds.length < 3) {
-            console.error("Need to specify hivelocity server ids. Is HIVELOCITY_SERVER_IDS env var not set?")
-            throw new Error("No available servers, check dpl logs.")
-          }
-
-          // XXX: Actually do a round-robbin.
-          let index = 0
-          if (user.web3Address == "0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5") {
-            index = 1
-          } else if (user.web3Address == "0xA4a336783326241acFf520D91eb8841Ad3B9BD1a") {
-            index = 2
-          }
-
-          const serverId = serverIds[index]
-
-
-          let headers = new Headers()
-
-          // XXX: Replace this with env var
-          headers.set('X-API-KEY', process.env.HIVELOCITY_KEY)
-          headers.set('accept', 'application/json')
-          headers.set('content-type', 'application/json')
-
-          {
-            // 1. Shutdown
-            console.log("Sending shutdown request.")
-            const shutdownUrl = 'https://core.hivelocity.net/api/v2/device/' + serverId + '/power?action=shutdown'
-            const provisionRequest: RequestInfo = new Request(shutdownUrl, {
-              method: `POST`,
-              headers: headers,
-            });
-
-            const response = await fetch(shutdownUrl, provisionRequest)
-
-            if (!response.ok) {
-              // console.log(response)
-              console.log("Server id: ", serverId)
-              console.log(await response.json())
-              // throw new Error(`Error shutting down! status: ${response.status}`);
-            }
-          }
-
-          // XXX: Actually change architecture to do this asynchronously, instead of hanging on this one request.
-          {
-            // 2. Wait for the server to actually be shutdown.
-            console.log("Waiting for power status off.")
-            const attemptLimit = 30;
-            let attemptCount = 0;
-            let success = false;
-            const powerUrl = 'https://core.hivelocity.net/api/v2/device/' + serverId + '/power'
-            const powerRequest = new Request(powerUrl,  {
-              method: 'GET',
-              headers: headers
-            })
-
-            while (attemptCount < attemptLimit) {
-              const response = await fetch(powerUrl, powerRequest)
-
-              if (response.ok) {
-                // success = true
-                // console.log(response)
-
-                const data = await response.json()
-
-                if (data.powerStatus == "OFF") {
-                  console.log("Machine is off, proceeding.")
-                  success = true
-                  break
-                } else {
-                  console.log("Machine is on, trying again.")
-                }
-                // break
-              }
-
-              attemptCount ++;
-
-              function sleep(ms) {
-                return new Promise((resolve) => {
-                  setTimeout(resolve, ms);
-                });
-              }
-
-              await sleep(1000)
-            }
-
-            console.log("Finished waiting for status after ", attemptCount, " attempts.")
-          }
-
-          {
-            // 3. Reset + keys
-            const resetData = {
-              forceReload: true,
-              hostname: "xnode.openmesh.network",
-              osName: "Ubuntu 22.04 (VPS)",
-              script: "#cloud-config \nruncmd: \n - \"mkdir /tmp/boot && mount -t tmpfs -osize=90% none /tmp/boot && mkdir /tmp/boot/__img && wget -q -O /tmp/boot/__img/kexec.tar.xz http://boot.opnm.sh/kexec.tar.xz && mkdir /tmp/boot/system && mkdir /tmp/boot/system/proc && mount -t proc /proc /tmp/boot/system/proc && tar xvf /tmp/boot/__img/kexec.tar.xz -C /tmp/boot/system && rm /tmp/boot/__img/kexec.tar.xz && chroot /tmp/boot/system ./kexec_nixos \\\"-- XNODE_UUID=" + xnodeId + " XNODE_ACCESS_TOKEN=" + xnodeAccessToken + "\\\"\""
-            }
-
-            const url = 'https://core.hivelocity.net/api/v2/compute/' + serverId
-            const resetRequest: RequestInfo = new Request('https://core.hivelocity.net/api/v2/compute/' + serverId, {
-              method: `PUT`,
-              headers: headers,
-              body: JSON.stringify(resetData),
-            });
-
-            const response = await fetch(url, resetRequest)
-            if (!response.ok) {
-              console.error(response)
-              const data = await response.json()
-              console.log(data)
-
-              throw new Error("Failed to provision: " + response.status)
-            } else {
-              const data = await response.json()
-              console.log(data)
-
-              ipAddress = data.primaryIp
-            }
-          }
         } else {
           // Talk to the unit controller API. - Needs refactoring
           let controllerUrl = this.XU_CONTROLLER_URL;
@@ -321,8 +224,8 @@ export class XnodesService {
           // TODO: Test this, doesn't look correct:
           headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
           headers.set('Content-Type', 'application/json')
-          let jsondata = JSON.stringify({
-            // get the walletAddress for the user from prisma
+          let controllerPayload = JSON.stringify({
+            // Get the walletAddress for the user from prisma.
             // WalletAddress: user.walletAddress,
             xnodeId: xnodeId,
             xnodeAccessToken: xnodeAccessToken,
@@ -336,7 +239,7 @@ export class XnodesService {
           const provisionRequest: RequestInfo = new Request(controllerUrl, {
             method: `POST`,
             headers: headers,
-            body: jsondata,
+            body: controllerPayload,
           });
           let provisionUrl = controllerUrl + "/provision/" + tokenId;
 
@@ -424,7 +327,7 @@ export class XnodesService {
     console.log("Got services for node. ID: ", node.id, ", accessToken: ", node.accessToken)
     let preSharedKey = Buffer.from(node.accessToken, 'base64').toString('hex')
     console.log("Decoded access token: ", preSharedKey)
-    
+
 
     let jsonMessage = JSON.stringify(dataBody)
 
@@ -495,12 +398,53 @@ export class XnodesService {
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
       try {
+        let status = node.status
+
+        if (node.status == "booting") {
+          status = "booted"
+        }
+
         await this.prisma.deployment.updateMany({
           where: {
             id: id,
           },
           data: {
             heartbeatData: JSON.stringify(data),
+            status: status
+          }
+        })
+
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async pushXnodeStatus(dataBody: XnodeStatusDto, req: Request) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const { id, ...data} = dataBody;
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      try {
+        await this.prisma.deployment.updateMany({
+          where: {
+            id: id,
+          },
+          data: {
+            status: data.status,
           }
         })
       } catch(err) {
@@ -513,10 +457,6 @@ export class XnodesService {
       throw new Error("Invalid HMAC, is your access token correct?")
     }
   }
-  // TODO: Can get information from XU_URL/info/<xnode-unit-token-id>
-  //async fetch_unit_information(deployment: ) {
-    // STUB
-  //}
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
     // TODO: Double check this function works as expected.
@@ -540,13 +480,6 @@ export class XnodesService {
     }
 
     const { xnodeId, ...finalBody } = dataBody;
-
-
-    let status = xnode.status
-
-    if (xnode.status == "booting") {
-      status = "booted"
-    }
 
     return await this.prisma.deployment.update({
       data: {
@@ -647,7 +580,7 @@ export class XnodesService {
     const config = {
       method: 'post',
       url: `https://mainnet.ethereum.validationcloud.io/v1/${dataBody.apiKey}`,
-      headers: {
+        headers: {
         Accept: 'application/json',
       },
       data: dataBodyAPI,
@@ -705,7 +638,7 @@ export class XnodesService {
     const config = {
       method: 'post',
       url: `https://mainnet.polygon.validationcloud.io/v1/${dataBody.apiKey}`,
-      headers: {
+        headers: {
         Accept: 'application/json',
       },
       data: dataBodyAPI,
@@ -744,178 +677,5 @@ export class XnodesService {
     });
 
     return;
-  }
-
-  async connectAivenAPI(dataBody: ConnectAPI, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
-    const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
-    );
-
-    // validating the equinix key:
-    const config = {
-      method: 'get',
-      url: 'https://api.aiven.io/v1/project',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `aivenv1 ${dataBody.apiKey}`,
-      },
-    };
-
-    let data;
-
-    try {
-      await axios(config).then(function (response) {
-        data = response.data;
-      });
-    } catch (err) {
-      console.log(err.response.data.error);
-      console.log(err.response);
-      throw new BadRequestException(`Error validating api key`, {
-        cause: new Error(),
-        description: `${err.response.data.error}`,
-      });
-    }
-
-    //validate if user is admin
-    const keys = Object.keys(data?.project_membership);
-    if (data?.project_membership[keys[0]] !== 'admin') {
-      throw new BadRequestException(`project_membership is not an admin`, {
-        cause: new Error(),
-        description: `project_membership is not an admin`,
-      });
-    }
-
-    //validate if it has server deployed with grafana:
-    if (data.projects?.length === 0) {
-      throw new BadRequestException(
-        `User should have at least one project created`,
-        {
-          cause: new Error(),
-          description: `User should have at least one project created`,
-        },
-      );
-    }
-
-    let getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(
-      data,
-      dataBody.apiKey,
-    );
-
-    //if it does not have a grafana service data, just deploy a new one
-    if (!getGrafanaURIParams) {
-      getGrafanaURIParams = await this.deployGrafanaServiceFromAivenAPI(
-        data,
-        dataBody.apiKey,
-      );
-    }
-
-    //if the api is valid, store in user account
-    const upd = await this.prisma.openmeshExpertUser.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        aivenAPIKey: dataBody.apiKey,
-        aivenAPIServiceUriParams: JSON.stringify(getGrafanaURIParams),
-      },
-    });
-
-    return upd;
-  }
-
-  async getGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
-    if (data?.projects.length === 0) {
-      throw new BadRequestException(
-        `A project was not found, make sure to create one.`,
-        {
-          cause: new Error(),
-          description: `A project was not found, make sure to create one.`,
-        },
-      );
-    }
-    for (let i = 0; i < data?.projects.length; i++) {
-      const projectName = data?.projects[i].project_name;
-
-      // validating the equinix key:
-      const config = {
-        method: 'get',
-        url: `https://api.aiven.io/v1/project/${projectName}/service`,
-        headers: {
-          Accept: 'application/json',
-          Authorization: `aivenv1 ${apiKey}`,
-        },
-      };
-
-      let dataRes;
-
-      try {
-        await axios(config).then(function (response) {
-          dataRes = response.data;
-        });
-      } catch (err) {
-        console.log(err.response.data.error);
-        console.log(err.response);
-        throw new BadRequestException(`Error getting services`, {
-          cause: new Error(),
-          description: `${err.response.data.error}`,
-        });
-      }
-
-      if (dataRes?.services?.length > 0) {
-        for (let j = 0; j < dataRes?.services.length; j++) {
-          if (dataRes?.services[j].service_type === 'grafana') {
-            return dataRes?.services[j].service_uri_params;
-          }
-        }
-      }
-    }
-  }
-  async deployGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
-    const databody = {
-      cloud: 'do-syd',
-      group_name: 'default',
-      plan: 'startup-1',
-      service_name: 'openmesh-grafana-123',
-      service_type: 'grafana',
-      project_vpc_id: null,
-      user_config: {},
-      tags: {},
-    };
-    for (let i = 0; i < data?.projects.length; i++) {
-      const projectName = data?.projects[i].project_name;
-
-      // validating the equinix key:
-      const config = {
-        method: 'post',
-        url: `https://api.aiven.io/v1/project/${projectName}/service`,
-        headers: {
-          Accept: 'application/json',
-          Authorization: `aivenv1 ${apiKey}`,
-        },
-        data: databody,
-      };
-
-      let dataRes;
-
-      try {
-        await axios(config).then(function (response) {
-          dataRes = response.data;
-        });
-      } catch (err) {
-        console.log(err.response.data.error);
-        console.log(err.response);
-      }
-
-      if (dataRes?.service) {
-        return dataRes.service.service_uri_params;
-      }
-    }
-
-    // if no project works, just trhows error
-    throw new BadRequestException('Grafana service deploy failed', {
-      cause: new Error(),
-      description: 'Grafana service deploy failed',
-    });
   }
 }

@@ -95,6 +95,25 @@ export class CreateXnodeDto {
   services: string;
 }
 
+export class XnodeStatusDto {
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode\'s id',
+    maxLength: 100,
+  })
+  id: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(20)
+  @ApiProperty({
+    description: 'Status.'
+  })
+  status: string;
+}
+
 export class XnodeHeartbeatDto {
   @IsNotEmpty()
   @MaxLength(100)

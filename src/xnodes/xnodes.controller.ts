@@ -32,6 +32,7 @@ import {
   GetXnodeServiceDto,
   PushXnodeServiceDto,
   UpdateXnodeDto,
+  XnodeStatusDto,
 } from './dto/xnodes.dto';
 import { TestingService } from './testing.service';
 
@@ -60,11 +61,19 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Push xnode heartbeat including resource metrics',
+    summary: 'Push xnode heartbeat including resource metrics.',
   })
   @Post('pushXnodeHeartbeat')
   pushXnodeHeartbeat(@Body() data: XnodeHeartbeatDto, @Req() req: Request) {
     return this.xnodesService.pushXnodeHeartbeat(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Push xnode status to determine whether it\'s building or not.',
+  })
+  @Post('pushXnodeStatus')
+  pushXnodeStatus(@Body() data: XnodeStatusDto, @Req() req: Request) {
+    return this.xnodesService.pushXnodeStatus(data, req);
   }
 
   @ApiOperation({
