@@ -93,9 +93,9 @@ model RecoverPassword {
 // Maybe rename to Xnode_Deployment to avoid confusion
 model Deployment {
   id String @id @default(uuid())
-  accessToken   String // Preshared Key
+  accessToken   String
   provider      String?
-  services      String? // should be named config or similar. Will eventually become config_remote (git remote url)
+  services      String? // Should be named config or similar.
   heartbeatData String?
   name          String?
   description   String?
@@ -103,11 +103,11 @@ model Deployment {
 
   status        String?
 
-  ipAddress      String // Ip address of the provisioned machine
-  deploymentAuth String // Either their apiKey or the unit's nftTokenId
+  ipAddress      String   // Ip address of the provisioned machine.
+  deploymentAuth String?  // If it's a unit its nft's token id.
 
   isUnit         Boolean
-  unitClaimTime  DateTime? // Tracks when the unit was minted
+  unitClaimTime  DateTime? // Tracks when the unit was minted.
 
   openmeshExpertUserId  String
   openmeshExpertUser    OpenmeshExpertUser @relation(fields: [openmeshExpertUserId], references: [id])
