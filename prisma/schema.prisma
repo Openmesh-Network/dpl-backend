@@ -102,7 +102,6 @@ model Deployment {
   location      String?
 
   status            String?
-  xnodepkgsVersion  String? // Stores the current commit hash of the current .
 
   ipAddress      String   // Ip address of the provisioned machine.
   deploymentAuth String?  // If it's a unit its nft's token id.
