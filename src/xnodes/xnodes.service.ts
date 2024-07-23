@@ -402,32 +402,36 @@ export class XnodesService {
     })
     let jsonMessage = JSON.stringify(dataBody)
 
-    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
-      try {
-        let status = node.status
+    if (node) {
+      if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+        try {
+          let status = node.status
 
-        if (node.status == "booting") {
-          status = "booted"
-        }
-
-        await this.prisma.deployment.updateMany({
-          where: {
-            id: id,
-          },
-          data: {
-            heartbeatData: JSON.stringify(data),
-            status: status
+          if (node.status == "booting") {
+            status = "booted"
           }
-        })
 
-      } catch(err) {
-        throw new BadRequestException('Failed to authenticate', {
-          cause: new Error(),
-          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
-        });
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: id,
+            },
+            data: {
+              heartbeatData: JSON.stringify(data),
+              status: status
+            }
+          })
+
+        } catch(err) {
+          throw new BadRequestException('Failed to authenticate', {
+            cause: new Error(),
+            description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+          });
+        }
+      } else {
+        throw new Error("Invalid HMAC, is your access token correct?")
       }
     } else {
-      throw new Error("Invalid HMAC, is your access token correct?")
+      throw new Error("No node found with id: " + dataBody.id)
     }
   }
 
