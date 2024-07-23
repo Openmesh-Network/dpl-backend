@@ -114,6 +114,34 @@ export class XnodeStatusDto {
   status: string;
 }
 
+export class XnodeGetUpdateDto {
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode\'s id',
+    maxLength: 100,
+  })
+  id: string;
+}
+
+export class XnodePushUpdateDto {
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode\'s id',
+    maxLength: 100,
+  })
+  id: string;
+
+  @IsNumber()
+  @ApiProperty({
+    description: 'Generation applied'
+  })
+  generation: number;
+}
+
 export class XnodeHeartbeatDto {
   @IsNotEmpty()
   @MaxLength(100)

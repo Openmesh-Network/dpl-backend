@@ -24,6 +24,8 @@ import {
   CreateXnodeDto,
   XnodeHeartbeatDto,
   XnodeStatusDto,
+  XnodeGetUpdateDto,
+  XnodePushUpdateDto,
   GetXnodeDto,
   GetXnodeServiceDto,
   PushXnodeServiceDto,
@@ -197,9 +199,10 @@ export class XnodesService {
             }
           })
 
-          console.log("Found: " + duplicateNftServers.length + " servers matching nft. Deleting them now.");
+          console.log("Found: " + duplicateNftServers.length + " servers matching nft..");
 
           for (let i = 0; i < duplicateNftServers.length; i++) {
+            console.log("Deleting server: ", duplicateNftServers[i].id)
             await prisma.deployment.deleteMany({
               where: {
                 deploymentAuth: duplicateNftServers[i].deploymentAuth
@@ -280,6 +283,8 @@ export class XnodesService {
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
           status: "booting",
+          updateGenerationHave: 0,
+          updateGenerationWant: 0,
           ...xnodeData,
         },
       });
@@ -423,6 +428,92 @@ export class XnodesService {
       }
     } else {
       throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async getXnodeUpdate(dataBody: XnodeGetUpdateDto, req: Request) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      return {
+        want: node.updateGenerationWant,
+        have: node.updateGenerationHave,
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async pushXnodeUpdate(dataBody: XnodePushUpdateDto, req: Request) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      try {
+        await this.prisma.deployment.updateMany({
+          where: {
+            id: dataBody.id,
+          },
+          data: {
+            updateGenerationHave: dataBody.generation,
+          }
+        })
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async allowXnodeUpdate(dataBody: XnodePushUpdateDto, req: Request) {
+    const sessionToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      sessionToken,
+    );
+
+    const xnode = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+        openmeshExpertUserId: user.id,
+      },
+    });
+
+    if (xnode) {
+      try {
+        await this.prisma.deployment.updateMany({
+          where: {
+            id: dataBody.id,
+          },
+          data: {
+            updateGenerationWant: dataBody.generation,
+          }
+        })
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("No xnode with id found.")
     }
   }
 
