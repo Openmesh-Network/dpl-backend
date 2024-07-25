@@ -373,8 +373,7 @@ export class XnodesService {
     } else {
       console.log("Setting services for node. ID: ", dataBody.id)
 
-      // Actually update.
-      await this.prisma.deployment.updateMany({
+      let node = await this.prisma.deployment.findFirst({
         where: {
           AND: [
             {
@@ -383,12 +382,35 @@ export class XnodesService {
             {
               openmeshExpertUserId: user.id,
             }
-          ]
-        },
-        data: {
-          services: dataBody.services
+          ],
         }
       })
+
+      if (node.services !== dataBody.services) {
+        // Actually update.
+        console.log('Pushing new configuration to the xnode.')
+
+        await this.prisma.deployment.updateMany({
+          where: {
+            AND: [
+              {
+                id: dataBody.id,
+              },
+              {
+                openmeshExpertUserId: user.id,
+              }
+            ]
+          },
+          data: {
+            services: dataBody.services,
+
+            // This will notify the xnode to actually reconfigure.
+            configGenerationWant: node.configGenerationWant + 1
+          }
+        })
+      } else {
+        console.log('Configuration is unchanged, not changing database.')
+      }
     }
   }
 
