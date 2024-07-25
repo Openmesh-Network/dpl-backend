@@ -352,6 +352,9 @@ export class ChatbotBedrockService {
     2. Carefully examine the big query schema when writing sql query for big query. Take special care around how data type for 
     time stamps are defined and if it needs to be converted. 
 
+    Additional Context:
+    1. SingularityNET’s AGIX and Ocean Protocol’s OCEAN tokens have consolidated into into Fetch.ai’s FET tokens as of July 1, 2024.
+
     Prioritize:
     1. Accuracy and validity of the generated SQL query.
     2. Optimal use of the provided schema and tables.
@@ -621,6 +624,9 @@ export class ChatbotBedrockService {
     Your job is to use the given data and either summarize it or answer the question if the original query contains a question.
     5. Do not mention any other agents. The agent architecture is for the backend, the user just knows they're chatting to a chatbot.
     6. You should only output a textual description and nothing else.
+
+    Additional Context:
+    1. SingularityNET’s AGIX and Ocean Protocol’s OCEAN tokens have consolidated into into Fetch.ai’s FET tokens as of July 1, 2024.
 
     Prioritize:
     1. Accuracy and validity of the generated response.
