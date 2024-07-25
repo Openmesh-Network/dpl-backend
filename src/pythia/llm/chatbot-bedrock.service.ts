@@ -353,7 +353,7 @@ export class ChatbotBedrockService {
     time stamps are defined and if it needs to be converted. 
 
     Additional Context:
-    1. SingularityNET’s AGIX and Ocean Protocol’s OCEAN tokens have consolidated into into Fetch.ai’s FET tokens as of July 1, 2024.
+    1. SingularityNET’s AGIX and Ocean Protocol’s OCEAN tokens have consolidated into into Fetch.ai’s FET tokens as of July 1, 2024. If a user requests OCEAN or AGIX token information, silently use FET instead.
 
     Prioritize:
     1. Accuracy and validity of the generated SQL query.
@@ -494,8 +494,8 @@ export class ChatbotBedrockService {
     
     Guidelines:
     1. You only respond with 'true' or 'false'
-    2. You responsd 'true' if the query is trying to get cryptocurrency CEX trades data from a custom database table called 'trades_l2'
-    3. You responsd 'false' if the query is trying to get ethereum blockchain data from Big Query's ethereum blockchain dataset`
+    2. You respond 'true' if the query is trying to get cryptocurrency CEX trades data from a custom database table called 'trades_l2'
+    3. You respond 'false' if the query is trying to get ethereum blockchain data from Big Query's ethereum blockchain dataset`
 
     const messages = [
       new SystemMessage(system_context),
@@ -621,12 +621,13 @@ export class ChatbotBedrockService {
     2. If summarizing the data will help address the query then you should summarize the data.
     3. Do not output a chart or table or data of any kind. Your job is to just provide a textual summary or helpful answer. A different agent will display the chart to the user.
     4. Do not respond with I can't show a chart. That's not your job. The given query is ran through other AI agents before coming to you. Other agents will render a chart and fetch required data.
-    Your job is to use the given data and either summarize it or answer the question if the original query contains a question.
-    5. Do not mention any other agents. The agent architecture is for the backend, the user just knows they're chatting to a chatbot.
-    6. You should only output a textual description and nothing else.
+    5. Your job is to use the given data and either summarize it or answer the question if the original query contains a question.
+    6. Do not mention any other agents. The agent architecture is for the backend, the user just knows they're chatting to a chatbot.
+    7. You should only output a textual description and nothing else.
+    8. If data you summarise contains date or timestamp information, and could become less accurate or timely if displayed in the future, mention the time or date at which the data was created or updated.
 
     Additional Context:
-    1. SingularityNET’s AGIX and Ocean Protocol’s OCEAN tokens have consolidated into into Fetch.ai’s FET tokens as of July 1, 2024.
+    1. SingularityNET’s AGIX and Ocean Protocol’s OCEAN tokens have consolidated into into Fetch.ai’s FET tokens as of July 1, 2024. It's after July 1, 2024, so if a user asks about AGIX or OCEAN, respond that the consolidation has taken place and correct the symbol usage when responding, otherwise obey all other requirements.
 
     Prioritize:
     1. Accuracy and validity of the generated response.
@@ -667,7 +668,30 @@ export class ChatbotBedrockService {
       },
     
     Ideal Response: The chart shows the average daily volume of ethereum on coinbase between the dates 01/05/2024 and 08/05/2024. 
-    The highest volume was 12843 on 1st May and the lowest volume was on 4th May`
+    The highest volume was 12843 on 1st May and the lowest volume was on 4th May
+    
+    -    Example Query: what is the current price of AGIX?
+-
+-    Example Data: data = [
+-      {
+-        date: "2024-07-04T00:00:00.000Z",
+-        exchange: "Coinbase",
+-        price: 12843.94708887969,
+-      },
+-      {
+-        date: "2024-07-04T00:00:00.000Z",
+-        exchange: "OKX",
+-        price: 12844.94708887969,
+-      },
+-      {
+-        date: "2024-07-04T00:00:00.000Z",
+-        exchange: "Binance",
+-        price: 12845.94708887969,
+-      },
+-
+-    Ideal Response: As of 2024 July 4 00:00:00Z, on Coinbase, the price of FET (AGIX consolidated into FET on 2024 July 1) is 12843.94708887969. On OKX, at the same time, the price is 12844.97408887969. On Binance, at the same time, the price is 12845.94708887969. Other exchange's pricing data may be available, please ask which exchanges trade these symbols if you'd like more information.
+    
+    `
     
     
     // Given data to visualize:\n${data}`
