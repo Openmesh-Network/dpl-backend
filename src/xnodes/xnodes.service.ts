@@ -24,8 +24,8 @@ import {
   CreateXnodeDto,
   XnodeHeartbeatDto,
   XnodeStatusDto,
-  XnodeGetUpdateDto,
-  XnodePushUpdateDto,
+  XnodeGetGenerationDto,
+  XnodePushGenerationDto,
   GetXnodeDto,
   GetXnodeServiceDto,
   PushXnodeServiceDto,
@@ -283,6 +283,8 @@ export class XnodesService {
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
           status: "booting",
+          configGenerationHave: 0,
+          configGenerationWant: 0,
           updateGenerationHave: 0,
           updateGenerationWant: 0,
           ...xnodeData,
@@ -435,7 +437,7 @@ export class XnodesService {
     }
   }
 
-  async getXnodeUpdate(dataBody: XnodeGetUpdateDto, req: Request) {
+  async getXnodeGeneration(dataBody: XnodeGetGenerationDto, req: Request, isConfigGeneration: boolean) {
     const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     const node = await this.prisma.deployment.findFirst({
@@ -447,16 +449,26 @@ export class XnodesService {
     let jsonMessage = JSON.stringify(dataBody)
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      let want;
+      let have;
+      if (isConfigGeneration) {
+        want = node.configGenerationWant
+        have = node.configGenerationHave
+      } else {
+        want = node.updateGenerationWant
+        have = node.updateGenerationHave
+      }
+
       return {
-        want: node.updateGenerationWant,
-        have: node.updateGenerationHave,
+        want: want,
+        have: have,
       }
     } else {
       throw new Error("Invalid HMAC, is your access token correct?")
     }
   }
 
-  async pushXnodeUpdate(dataBody: XnodePushUpdateDto, req: Request) {
+  async pushXnodeGeneration(dataBody: XnodePushGenerationDto, req: Request, isConfigGeneration: boolean) {
     const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     const node = await this.prisma.deployment.findFirst({
@@ -468,14 +480,26 @@ export class XnodesService {
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
       try {
-        await this.prisma.deployment.updateMany({
-          where: {
-            id: dataBody.id,
-          },
-          data: {
-            updateGenerationHave: dataBody.generation,
-          }
-        })
+
+        if (isConfigGeneration) {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              configGenerationHave: dataBody.generation,
+            }
+          })
+        } else {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              updateGenerationHave: dataBody.generation,
+            }
+          })
+        }
       } catch(err) {
         throw new BadRequestException('Failed to authenticate', {
           cause: new Error(),
@@ -487,12 +511,14 @@ export class XnodesService {
     }
   }
 
-  async allowXnodeUpdate(dataBody: XnodePushUpdateDto, req: Request) {
+  async allowXnodeGeneration(dataBody: XnodePushGenerationDto, req: Request, isConfigGeneration: boolean) {
+    console.log('Incrementing want generation.')
     const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
       sessionToken,
     );
 
+    console.log('Running database query')
     const xnode = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
@@ -502,14 +528,28 @@ export class XnodesService {
 
     if (xnode) {
       try {
-        await this.prisma.deployment.updateMany({
-          where: {
-            id: dataBody.id,
-          },
-          data: {
-            updateGenerationWant: dataBody.generation,
-          }
-        })
+        console.log('Updating database')
+
+        if (isConfigGeneration) {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              configGenerationWant: dataBody.generation,
+            }
+          })
+        } else {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              updateGenerationWant: dataBody.generation,
+            }
+          })
+        }
+
       } catch(err) {
         throw new BadRequestException('Failed to authenticate', {
           cause: new Error(),
@@ -524,7 +564,7 @@ export class XnodesService {
   async pushXnodeStatus(dataBody: XnodeStatusDto, req: Request) {
     const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
-    const { id, ...data} = dataBody;
+    const { id, ...data } = dataBody;
 
     const node = await this.prisma.deployment.findFirst({
       where: {

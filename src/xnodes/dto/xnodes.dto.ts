@@ -114,7 +114,7 @@ export class XnodeStatusDto {
   status: string;
 }
 
-export class XnodeGetUpdateDto {
+export class XnodeGetGenerationDto {
   @IsNotEmpty()
   @MaxLength(100)
   @IsString()
@@ -125,7 +125,7 @@ export class XnodeGetUpdateDto {
   id: string;
 }
 
-export class XnodePushUpdateDto {
+export class XnodePushGenerationDto {
   @IsNotEmpty()
   @MaxLength(100)
   @IsString()

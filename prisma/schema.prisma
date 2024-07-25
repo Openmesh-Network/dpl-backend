@@ -106,6 +106,9 @@ model Deployment {
   updateGenerationWant  Int
   updateGenerationHave  Int
 
+  configGenerationWant  Int
+  configGenerationHave  Int
+
   ipAddress      String   // Ip address of the provisioned machine.
   deploymentAuth String?  // If it's a unit its nft's token id.
 
