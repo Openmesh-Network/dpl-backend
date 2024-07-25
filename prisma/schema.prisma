@@ -103,16 +103,16 @@ model Deployment {
 
   status            String?
 
-  updateGenerationWant  Int
-  updateGenerationHave  Int
+  updateGenerationWant  Int @default(0)
+  updateGenerationHave  Int @default(0)
 
-  configGenerationWant  Int
-  configGenerationHave  Int
+  configGenerationWant  Int @default(0)
+  configGenerationHave  Int @default(0)
 
   ipAddress      String   // Ip address of the provisioned machine.
   deploymentAuth String?  // If it's a unit its nft's token id.
 
-  isUnit         Boolean
+  isUnit         Boolean @default(false)
   unitClaimTime  DateTime? // Tracks when the unit was minted.
 
   openmeshExpertUserId  String
