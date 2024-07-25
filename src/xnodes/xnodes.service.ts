@@ -278,13 +278,13 @@ export class XnodesService {
           isUnit: xnodeData.isUnit,
           openmeshExpertUserId: user.id,
           services: services,
-          // XXX: Need xu controller to support ip address, placeholder for now.
           ipAddress: ipAddress,
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
           status: "booting",
           configGenerationHave: 0,
-          configGenerationWant: 0,
+          // NOTE: Generation must be one so that the xnode will reconfigure on first boot!
+          configGenerationWant: 1,
           updateGenerationHave: 0,
           updateGenerationWant: 0,
           ...xnodeData,
