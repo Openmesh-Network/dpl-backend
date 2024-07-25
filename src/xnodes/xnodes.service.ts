@@ -437,7 +437,7 @@ export class XnodesService {
     }
   }
 
-  async getXnodeGeneration(dataBody: XnodeGetGenerationDto, req: Request, isConfigGeneration: boolean) {
+  async getXnodeGeneration(dataBody: XnodeGetGenerationDto, req: Request) {
     const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     const node = await this.prisma.deployment.findFirst({
@@ -449,19 +449,11 @@ export class XnodesService {
     let jsonMessage = JSON.stringify(dataBody)
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
-      let want;
-      let have;
-      if (isConfigGeneration) {
-        want = node.configGenerationWant
-        have = node.configGenerationHave
-      } else {
-        want = node.updateGenerationWant
-        have = node.updateGenerationHave
-      }
-
       return {
-        want: want,
-        have: have,
+        configWant: node.configGenerationWant,
+        configHave: node.configGenerationHave,
+        updateWant: node.updateGenerationWant,
+        updateHave: node.updateGenerationHave
       }
     } else {
       throw new Error("Invalid HMAC, is your access token correct?")
