@@ -551,6 +551,7 @@ export class XnodesService {
             },
             data: {
               configGenerationWant: dataBody.generation,
+              status: "pending reconfiguration"
             }
           })
         } else {
@@ -560,6 +561,7 @@ export class XnodesService {
             },
             data: {
               updateGenerationWant: dataBody.generation,
+              status: "pending update"
             }
           })
         }
