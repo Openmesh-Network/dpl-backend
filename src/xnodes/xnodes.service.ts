@@ -386,31 +386,29 @@ export class XnodesService {
         }
       })
 
-      if (node.services !== dataBody.services) {
-        // Actually update.
-        console.log('Pushing new configuration to the xnode.')
+      // Actually update.
+      console.log('Pushing new configuration to the xnode.')
 
-        await this.prisma.deployment.updateMany({
-          where: {
-            AND: [
-              {
-                id: dataBody.id,
-              },
-              {
-                openmeshExpertUserId: user.id,
-              }
-            ]
-          },
-          data: {
-            services: dataBody.services,
+      await this.prisma.deployment.updateMany({
+        where: {
+          AND: [
+            {
+              id: dataBody.id,
+            },
+            {
+              openmeshExpertUserId: user.id,
+            }
+          ]
+        },
+        data: {
+          services: dataBody.services,
 
-            // This will notify the xnode to actually reconfigure.
-            configGenerationWant: node.configGenerationWant + 1
-          }
-        })
-      } else {
-        console.log('Configuration is unchanged, not changing database.')
-      }
+          // This will notify the xnode to actually reconfigure.
+          configGenerationWant: node.configGenerationWant + 1
+        }
+      })
+    } else {
+      console.log('Configuration is unchanged, not changing database.')
     }
   }
 
