@@ -407,8 +407,6 @@ export class XnodesService {
           configGenerationWant: node.configGenerationWant + 1
         }
       })
-    } else {
-      console.log('Configuration is unchanged, not changing database.')
     }
   }
 
