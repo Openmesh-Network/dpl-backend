@@ -224,7 +224,7 @@ export class PushXnodeServiceDto {
   id: string;
 
   @IsNotEmpty()
-  @MaxLength(5000)
+  @MaxLength(50000)
   @IsString()
   @ApiProperty({
     description: 'The xnode\'s services',
