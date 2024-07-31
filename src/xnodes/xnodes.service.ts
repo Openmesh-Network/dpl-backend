@@ -343,7 +343,7 @@ export class XnodesService {
       let expiry = new Date().getTime() + 30 * 1000; // 30 seconds
       let message = JSON.stringify(
         {
-          "xnode_config": JSON.parse(node.services),
+          "xnode_config": node.services,
           "expiry": expiry
         }
       )
