@@ -80,31 +80,6 @@ export class XnodesService {
     // INPUT VALIDATION, dataBody is XnodeDto
     const { services, ...xnodeData } = dataBody; 
 
-
-    // A whitelist of addresses for testing, want to be safe and make sure only people we trust can run before the official launch on Wednesday.
-    const whitelist = [
-      `0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5`,
-      `0x99acBe5d487421cbd63bBa3673132E634a6b4720`,
-      `0x7703d5753c54852d4249f9784a3e8a6eea08e1dd`,
-      `0xA4a336783326241acFf520D91eb8841Ad3B9BD1a`,
-      `0x87d795cbb0CABd0A68Df54E6a01033046919bA43`,
-      '0x00AbF21a1f81d348B848a035951396Db96f28b3a',
-      '0x2DCcD53e4017eFa602Fd382C4495b7c006248eae',
-    ];
-
-    let isWhitelisted = false;
-    for (let address of whitelist) {
-      if (user.web3Address == address) {
-        isWhitelisted = true;
-      }
-    }
-
-    // XXX: Disable whitelist.
-    if (!isWhitelisted) {
-      console.error("User not whitelisted.")
-      throw new Error("Not whitelisted, stay posted on our social media for full release.");
-    }
-
     console.log('Final services:');
     console.log(services);
 
