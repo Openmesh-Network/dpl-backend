@@ -5,8 +5,8 @@ import os
 
 xnodeFunctionsPath = "http://localhost:3003/xnodes/functions/"
 xnodeFunctions =    {   "createXnode":"POST",
-                        "pushXnodeHeartbeat":"POST", 
-                        "getXnodeServices":"GET",  
+                        "pushXnodeHeartbeat":"POST",
+                        "getXnodeServices":"GET",
                         "storeXnodeSigningMessage":"POST",
                         "updateXnode":"PUT",
                         "getXnode":"GET",

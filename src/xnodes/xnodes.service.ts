@@ -1,18 +1,10 @@
 /* eslint-disable prefer-const */
 import {
-  ConflictException,
   Injectable,
   BadRequestException,
-  UnauthorizedException,
 } from '@nestjs/common';
-import * as path from 'path';
-import * as Papa from 'papaparse';
-import * as fs from 'fs';
 
-// import { import_ } from '@brillout/import';
 import { ethers } from 'ethers';
-import * as taskContractABI from '../contracts/taskContractABI.json';
-import * as erc20ContractABI from '../contracts/erc20ContractABI.json';
 
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
@@ -24,28 +16,23 @@ import {
 } from 'crypto' // NodeJS native crypto lib
 
 import { PrismaService } from '../database/prisma.service';
-import { Request, response } from 'express';
+import { Request } from 'express';
 import axios from 'axios';
-import { UtilsService } from '../utils/utils.service';
 import { OpenmeshExpertsAuthService } from 'src/openmesh-experts/openmesh-experts-auth.service';
 import {
   ConnectAPI,
   CreateXnodeDto,
   XnodeHeartbeatDto,
+  XnodeStatusDto,
+  XnodeGetGenerationDto,
+  XnodePushGenerationDto,
   GetXnodeDto,
   GetXnodeServiceDto,
-  StoreXnodeData,
-  StoreXnodeSigningMessageDataDTO,
+  PushXnodeServiceDto,
   UpdateXnodeDto,
 } from './dto/xnodes.dto';
 import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
-import { features } from 'process';
-import {
-  defaultSourcePayload,
-  defaultStreamProcessorPayload,
-  defaultWSPayload,
-} from './utils/constants';
-import { generateUUID8, generateUUID16 } from './utils/uuidGenerator';
+import { generateUUID16 } from './utils/uuidGenerator';
 
 @Injectable()
 export class XnodesService {
@@ -64,6 +51,7 @@ export class XnodesService {
   );
   XU_CONTROLLER_URL = process.env.XU_CONTROLLER_URL;
   XU_CONTROLLER_KEY = process.env.XU_CONTROLLER_KEY;
+  XNODE_API_URL = process.env.XNODE_API_URL;
 
   async createXnode(dataBody: CreateXnodeDto, req: Request) {
     const sessionToken = String(req.headers['x-parse-session-token']);
@@ -76,6 +64,8 @@ export class XnodesService {
         openmeshExpertUserId: user.id,
       },
     });
+
+    console.log("CreateXnode request")
 
     // XXX: Handle more elegantly? Maybe offer user the chance to delete Xnodes.
     // This actually works OK for now. Just important to note.
@@ -96,7 +86,10 @@ export class XnodesService {
       `0xc2859E9e0B92bf70075Cd47193fe9E59f857dFA5`,
       `0x99acBe5d487421cbd63bBa3673132E634a6b4720`,
       `0x7703d5753c54852d4249f9784a3e8a6eea08e1dd`,
-      `0xa4a336783326241acff520d91eb8841ad3b9bd1a`,
+      `0xA4a336783326241acFf520D91eb8841Ad3B9BD1a`,
+      `0x87d795cbb0CABd0A68Df54E6a01033046919bA43`,
+      '0x00AbF21a1f81d348B848a035951396Db96f28b3a',
+      '0x2DCcD53e4017eFa602Fd382C4495b7c006248eae',
     ];
 
     let isWhitelisted = false;
@@ -108,7 +101,8 @@ export class XnodesService {
 
     // XXX: Disable whitelist.
     if (!isWhitelisted) {
-      throw new Error("Not whitelisted, stay posted on our social media for the official launch.");
+      console.error("User not whitelisted.")
+      throw new Error("Not whitelisted, stay posted on our social media for full release.");
     }
 
     console.log('Final services:');
@@ -124,7 +118,7 @@ export class XnodesService {
 
     if (xnodeData.isUnit) {
 
-      let allowedTokenIdChars = "0123456789" // Must be uint256
+      let allowedTokenIdChars = "0123456789"
       for (let char of xnodeData.deploymentAuth) {
         if (!allowedTokenIdChars.includes(char)) {
           throw new Error(`Invalid NFT TokenId`);
@@ -191,49 +185,87 @@ export class XnodesService {
         throw new Error("No NFT mint date.")
       }
 
+      // Check if the NFT is already in the database.
+      {
+        // TODO: Add flag to change this behaviour.
+
+        console.log("Deleting any deployments with a matching nft.")
+
+        // If the NFT is already in the database, we have to delete it.
+        const result = await this.prisma.$transaction(async (prisma) => {
+          let duplicateNftServers = await prisma.deployment.findMany({
+            where: {
+              deploymentAuth: xnodeData.deploymentAuth
+            }
+          })
+
+          console.log("Found: " + duplicateNftServers.length + " servers matching nft..");
+
+          for (let i = 0; i < duplicateNftServers.length; i++) {
+            console.log("Deleting server: ", duplicateNftServers[i].id)
+            await prisma.deployment.deleteMany({
+              where: {
+                deploymentAuth: duplicateNftServers[i].deploymentAuth
+              }
+            })
+          }
+        })
+
+        console.log(result)
+      }
+
       console.log("Nft mint date: ", nftMintDate)
 
+      let ipAddress = ""
       {
-        if (1) {
-          // XXX: Re-enable the xu-controller API code.
+        if (process.env.MOCK_DEPLOYMENT == "1") {
+          console.log("Mock deployment enabled, not talking to any APIs or controller")
         } else {
           // Talk to the unit controller API. - Needs refactoring
-          let controller_url = this.XU_CONTROLLER_URL;
+          let controllerUrl = this.XU_CONTROLLER_URL;
           let headers: Headers = new Headers();
 
           // TODO: Test this, doesn't look correct:
           headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
-          let jsondata = JSON.stringify({
-            // get the walletAddress for the user from prisma
-            WalletAddress: user.walletAddress,
-            XNODE_UUID: xnodeId,
-            XNODE_ACCESS_TOKEN: xnodeAccessToken,
+          headers.set('Content-Type', 'application/json')
+          let controllerPayload = JSON.stringify({
+            // Get the walletAddress for the user from prisma.
+            // WalletAddress: user.walletAddress,
+            xnodeId: xnodeId,
+            xnodeAccessToken: xnodeAccessToken,
+            xnodeConfigRemote: this.XNODE_API_URL,
+            nftActivationTime: nftMintDate,
           });
 
           // Attempt provisioning (should only be done once) XXX
-          console.log("Controller url: ", controller_url)
+          console.log("Controller url: ", controllerUrl)
 
-          const provision_request: RequestInfo = new Request(controller_url, {
+          const provisionRequest: RequestInfo = new Request(controllerUrl, {
             method: `POST`,
             headers: headers,
-            body: jsondata,
+            body: controllerPayload,
           });
-          let provision_url = controller_url + "provision/" + tokenId;
+          let provisionUrl = controllerUrl + "/provision/" + tokenId;
 
-          console.log(provision_url)
+          console.log(provisionUrl)
 
-          const response = await fetch(provision_url, provision_request);
+          const response = await fetch(provisionUrl, provisionRequest);
           if (!response.ok) {
-            throw new Error(`Error! status: ${response.status}`);
+            // XXX: Print the body.
+            let message = await response.json()
+            console.log(message)
+
+            throw new Error(`Error! status: ${response.status}, message: ${message}`);
           }
 
-          const provision_unit_response = await response.json();
-          if (provision_unit_response == "Deployed into hivelocity") {
-            xnodeData.provider = "hivelocity"; // Why?
-          } else if (provision_unit_response == "Internal server error") {
-            throw new Error(`Unable to provision Xnode Unit`);
+          let body = await response.json()
+
+          if (response.ok) {
+            ipAddress = body.ipAddress
+            console.log("")
           } else {
-            console.log("Fatal provisioning error.");
+            console.log("Couldn't provision unit: " + body.message)
+            throw new Error(`Unable to provision Xnode Unit`);
           }
         }
       }
@@ -245,11 +277,16 @@ export class XnodesService {
           accessToken: xnodeAccessToken,
           isUnit: xnodeData.isUnit,
           openmeshExpertUserId: user.id,
-
-          // XXX: Need xu controller to support ip address, placeholder for now.
-          ipAddress: "172.67.132.118",
+          services: services,
+          ipAddress: ipAddress,
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
+          status: "booting",
+          configGenerationHave: 0,
+          // NOTE: Generation must be one so that the xnode will reconfigure on first boot!
+          configGenerationWant: 1,
+          updateGenerationHave: 0,
+          updateGenerationWant: 0,
           ...xnodeData,
         },
       });
@@ -265,80 +302,325 @@ export class XnodesService {
 
       return xnode
     } else { // Non Xnode units.
-      // Deploy into a provider via api proxy?
+      // TODO: Connect to xnode deployment backend instead.
       console.error("Not currently supported...")
       throw new Error("Not currently supported.")
     }
   }
 
+  generate_hmac(accessToken, message) {
+    let preSharedKey = createSecretKey(accessToken, 'base64')
+    const computedHmac = createHmac('sha256', preSharedKey).update(message, 'utf8').digest('hex');
+    return computedHmac
+  }
+
+  verifyHmac(accessToken, message, claimedHmac) {
+    // accessToken is passed as base64
+    console.log("Computing hmac for message:", message)
+    let realHmac = this.generate_hmac(accessToken, message)
+    let verified = realHmac === claimedHmac
+    console.log("Hmac computed: ", realHmac, "matched:", verified)
+    return verified
+  }
+
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']); // Does not make sense, access token = session token?
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); 
+
+    // XXX: Needs anti-spam measures.
     const node = await this.prisma.deployment.findFirst({
       where: {
-        AND: [
-          {
-            id: dataBody.id,
-          },
-          {
-            // Hmac validation
-            accessToken: accessToken
-          }
-        ]
+        id: dataBody.id,
       }
     })
+    console.log("Got services for node. ID: ", node.id, ", accessToken: ", node.accessToken)
+    let preSharedKey = Buffer.from(node.accessToken, 'base64').toString('hex')
+    console.log("Decoded access token: ", preSharedKey)
 
-    return node.services
-  }
 
-  async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']); // Rename session token to avoid confusion with browser sessions
+    let jsonMessage = JSON.stringify(dataBody)
 
-    const { id, ...data} = dataBody;
-
-    try {
-      await this.prisma.deployment.updateMany({
-        where: {
-          AND: [
-            {
-              id: id,
-            },
-            {
-            // Hmac validation              
-              accessToken: accessToken
-            }
-          ]
-        },
-        data: {
-          heartbeatData: JSON.stringify(data),
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      let expiry = new Date().getTime() + 30 * 1000; // 30 seconds
+      let message = JSON.stringify(
+        {
+          "xnode_config": node.services,
+          "expiry": expiry
         }
-      })
-    } catch(err) {
-      throw new BadRequestException('Failed to authenticate', {
-        cause: new Error(),
-        description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
-      });
+      )
+      let msg_hmac = this.generate_hmac(node.accessToken, message)
+      console.log("Creating hmac for", message)
+      console.log(msg_hmac)
+      return {
+        message,
+        "hmac": msg_hmac
+      }
+
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
     }
   }
-  // TODO: Can get information from node_information/<xnode-unit-token-id>
-  //async fetch_unit_information(deployment: ) {
-    // STUB
-  //}
 
-  async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
-    // TODO: Double check this function works as expected.
+  async pushXnodeServices(dataBody: PushXnodeServiceDto, req: Request) {
     const accessToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
       accessToken,
     );
 
-    const xnodes = await this.prisma.deployment.findFirst({
+    console.log("Request to update services from user: ", user.id, "request: ", dataBody)
+
+    if (!user) {
+      throw new Error("Unauthorized user.")
+    } else {
+      console.log("Setting services for node. ID: ", dataBody.id)
+
+      let node = await this.prisma.deployment.findFirst({
+        where: {
+          AND: [
+            {
+              id: dataBody.id,
+            },
+            {
+              openmeshExpertUserId: user.id,
+            }
+          ],
+        }
+      })
+
+      // Actually update.
+      console.log('Pushing new configuration to the xnode.')
+
+      await this.prisma.deployment.updateMany({
+        where: {
+          AND: [
+            {
+              id: dataBody.id,
+            },
+            {
+              openmeshExpertUserId: user.id,
+            }
+          ]
+        },
+        data: {
+          services: dataBody.services,
+
+          // This will notify the xnode to actually reconfigure.
+          configGenerationWant: node.configGenerationWant + 1
+        }
+      })
+    }
+  }
+
+  async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const { id, ...data} = dataBody;
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (node) {
+      if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+        try {
+          let status = node.status
+
+          if (node.status == "booting") {
+            status = "booted"
+          }
+
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: id,
+            },
+            data: {
+              heartbeatData: JSON.stringify(data),
+              status: status
+            }
+          })
+
+        } catch(err) {
+          throw new BadRequestException('Failed to authenticate', {
+            cause: new Error(),
+            description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+          });
+        }
+      } else {
+        throw new Error("Invalid HMAC, is your access token correct?")
+      }
+    } else {
+      throw new Error("No node found with id: " + dataBody.id)
+    }
+  }
+
+  async getXnodeGeneration(dataBody: XnodeGetGenerationDto, req: Request) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      return {
+        configWant: node.configGenerationWant,
+        configHave: node.configGenerationHave,
+        updateWant: node.updateGenerationWant,
+        updateHave: node.updateGenerationHave
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async pushXnodeGeneration(dataBody: XnodePushGenerationDto, req: Request, isConfigGeneration: boolean) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      try {
+
+        if (isConfigGeneration) {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              configGenerationHave: dataBody.generation,
+            }
+          })
+        } else {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              updateGenerationHave: dataBody.generation,
+            }
+          })
+        }
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async allowXnodeGeneration(dataBody: XnodePushGenerationDto, req: Request, isConfigGeneration: boolean) {
+    console.log('Incrementing want generation.')
+    const sessionToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      sessionToken,
+    );
+
+    console.log('Running database query')
+    const xnode = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+        openmeshExpertUserId: user.id,
+      },
+    });
+
+    if (xnode) {
+      try {
+        console.log('Updating database')
+
+        if (isConfigGeneration) {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              configGenerationWant: dataBody.generation,
+              status: "pending reconfiguration"
+            }
+          })
+        } else {
+          await this.prisma.deployment.updateMany({
+            where: {
+              id: dataBody.id,
+            },
+            data: {
+              updateGenerationWant: dataBody.generation,
+              status: "pending update"
+            }
+          })
+        }
+
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("No xnode with id found.")
+    }
+  }
+
+  async pushXnodeStatus(dataBody: XnodeStatusDto, req: Request) {
+    const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
+
+    const { id, ...data } = dataBody;
+
+    const node = await this.prisma.deployment.findFirst({
+      where: {
+        id: dataBody.id,
+      }
+    })
+    let jsonMessage = JSON.stringify(dataBody)
+
+    if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
+      try {
+        await this.prisma.deployment.updateMany({
+          where: {
+            id: id,
+          },
+          data: {
+            status: data.status,
+          }
+        })
+      } catch(err) {
+        throw new BadRequestException('Failed to authenticate', {
+          cause: new Error(),
+          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+        });
+      }
+    } else {
+      throw new Error("Invalid HMAC, is your access token correct?")
+    }
+  }
+
+  async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
+    // TODO: Double check this function works as expected.
+    const sessionToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      sessionToken,
+    );
+
+    const xnode = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.xnodeId,
         openmeshExpertUserId: user.id,
       },
     });
 
-    if (!xnodes) {
+    if (!xnode) {
       throw new BadRequestException('Xnode not found', {
         cause: new Error(),
         description: 'Xnode not found',
@@ -349,6 +631,7 @@ export class XnodesService {
 
     return await this.prisma.deployment.update({
       data: {
+        status: status,
         ...finalBody,
       },
       where: {
@@ -358,9 +641,9 @@ export class XnodesService {
   }
 
   async getXnode(dataBody: GetXnodeDto, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
+    const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
+      sessionToken,
     );
 
     return await this.prisma.deployment.findFirst({
@@ -380,115 +663,6 @@ export class XnodesService {
     return await this.prisma.deployment.findMany({
       where: {
         openmeshExpertUserId: user.id,
-      },
-    });
-  }
-
-  async getNodesValidatorsStats() {
-    const nodesListing = await this.prisma.xnode.findMany({
-      where: {
-        type: 'validator',
-      },
-    });
-
-    return {
-      stats: {
-        totalValidators: nodesListing.length,
-        totalStakeAmount: 0,
-        totalAverageReward: 0,
-        averagePayoutPeriod: 'Every 7 days',
-      },
-      nodes: nodesListing,
-    };
-  }
-
-  async getXnodeWithNodesValidatorsStats(data: GetXnodeDto) {
-    const node = await this.prisma.xnode.findFirst({
-      where: {
-        id: data.id,
-      },
-      include: {
-        XnodeClaimActivities: true,
-      },
-    });
-    const nodesListing = await this.prisma.xnode.findMany({
-      where: {
-        type: 'validator',
-      },
-    });
-
-    return {
-      node: node,
-      stats: {
-        totalValidators: nodesListing.length,
-        totalStakeAmount: 0,
-        totalAverageReward: 0,
-        averagePayoutPeriod: 'Every 7 days',
-      },
-      nodes: nodesListing,
-    };
-  }
-  /*
-  async storeXnodeData(data: StoreXnodeData) {
-    console.log('the log data');
-
-    console.log(data);
-    const { buildId, ...finalData } = data;
-
-    const buildIdExists = await this.prisma.xnode.findFirst({
-      where: {
-        buildId,
-      },
-    });
-
-    if (!buildIdExists) {
-      throw new BadRequestException('BuildId not found', {
-        cause: new Error(),
-        description: 'BuildId not found',
-      });
-    }
-    console.log(data);
-
-    //if you receive the data, it also means the node has been deployed succesfully
-    return await this.prisma.xnode.updateMany({
-      where: {
-        buildId,
-      },
-      data: {
-        status: 'Running',
-        ...finalData,
-      },
-    });
-  } */
-
-  async storeXnodeSigningMessage(
-    dataBody: StoreXnodeSigningMessageDataDTO,
-    req: Request,
-  ) {
-    const accessToken = String(req.headers['x-parse-session-token']);
-    const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
-    );
-
-    const xnodeExists = await this.prisma.xnode.findFirst({
-      where: {
-        id: dataBody.xnodeId,
-        openmeshExpertUserId: user.id,
-      },
-    });
-
-    if (!xnodeExists)
-      throw new BadRequestException(`Xnode not found`, {
-        cause: new Error(),
-        description: `Xnode not found`,
-      });
-
-    return await this.prisma.xnode.update({
-      where: {
-        id: dataBody.xnodeId,
-      },
-      data: {
-        validatorSignature: dataBody.signedMessage,
       },
     });
   }
@@ -554,7 +728,7 @@ export class XnodesService {
     const config = {
       method: 'post',
       url: `https://mainnet.ethereum.validationcloud.io/v1/${dataBody.apiKey}`,
-      headers: {
+        headers: {
         Accept: 'application/json',
       },
       data: dataBodyAPI,
@@ -612,7 +786,7 @@ export class XnodesService {
     const config = {
       method: 'post',
       url: `https://mainnet.polygon.validationcloud.io/v1/${dataBody.apiKey}`,
-      headers: {
+        headers: {
         Accept: 'application/json',
       },
       data: dataBodyAPI,
@@ -651,188 +825,5 @@ export class XnodesService {
     });
 
     return;
-  }
-
-  async connectAivenAPI(dataBody: ConnectAPI, req: Request) {
-    const accessToken = String(req.headers['x-parse-session-token']);
-    const user = await this.openmeshExpertsAuthService.verifySessionToken(
-      accessToken,
-    );
-
-    // validating the equinix key:
-    const config = {
-      method: 'get',
-      url: 'https://api.aiven.io/v1/project',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `aivenv1 ${dataBody.apiKey}`,
-      },
-    };
-
-    let data;
-
-    try {
-      await axios(config).then(function (response) {
-        data = response.data;
-      });
-    } catch (err) {
-      console.log(err.response.data.error);
-      console.log(err.response);
-      throw new BadRequestException(`Error validating api key`, {
-        cause: new Error(),
-        description: `${err.response.data.error}`,
-      });
-    }
-
-    //validate if user is admin
-    const keys = Object.keys(data?.project_membership);
-    if (data?.project_membership[keys[0]] !== 'admin') {
-      throw new BadRequestException(`project_membership is not an admin`, {
-        cause: new Error(),
-        description: `project_membership is not an admin`,
-      });
-    }
-
-    //validate if it has server deployed with grafana:
-    if (data.projects?.length === 0) {
-      throw new BadRequestException(
-        `User should have at least one project created`,
-        {
-          cause: new Error(),
-          description: `User should have at least one project created`,
-        },
-      );
-    }
-
-    let getGrafanaURIParams = await this.getGrafanaServiceFromAivenAPI(
-      data,
-      dataBody.apiKey,
-    );
-
-    //if it does not have a grafana service data, just deploy a new one
-    if (!getGrafanaURIParams) {
-      getGrafanaURIParams = await this.deployGrafanaServiceFromAivenAPI(
-        data,
-        dataBody.apiKey,
-      );
-    }
-
-    //if the api is valid, store in user account
-    const upd = await this.prisma.openmeshExpertUser.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        aivenAPIKey: dataBody.apiKey,
-        aivenAPIServiceUriParams: JSON.stringify(getGrafanaURIParams),
-      },
-    });
-
-    return upd;
-  }
-
-  async getGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
-    if (data?.projects.length === 0) {
-      throw new BadRequestException(
-        `A project was not found, make sure to create one.`,
-        {
-          cause: new Error(),
-          description: `A project was not found, make sure to create one.`,
-        },
-      );
-    }
-    for (let i = 0; i < data?.projects.length; i++) {
-      const projectName = data?.projects[i].project_name;
-
-      // validating the equinix key:
-      const config = {
-        method: 'get',
-        url: `https://api.aiven.io/v1/project/${projectName}/service`,
-        headers: {
-          Accept: 'application/json',
-          Authorization: `aivenv1 ${apiKey}`,
-        },
-      };
-
-      let dataRes;
-
-      try {
-        await axios(config).then(function (response) {
-          dataRes = response.data;
-        });
-      } catch (err) {
-        console.log(err.response.data.error);
-        console.log(err.response);
-        throw new BadRequestException(`Error getting services`, {
-          cause: new Error(),
-          description: `${err.response.data.error}`,
-        });
-      }
-
-      if (dataRes?.services?.length > 0) {
-        for (let j = 0; j < dataRes?.services.length; j++) {
-          if (dataRes?.services[j].service_type === 'grafana') {
-            return dataRes?.services[j].service_uri_params;
-          }
-        }
-      }
-    }
-  }
-  async deployGrafanaServiceFromAivenAPI(data: any, apiKey: string) {
-    const databody = {
-      cloud: 'do-syd',
-      group_name: 'default',
-      plan: 'startup-1',
-      service_name: 'openmesh-grafana-123',
-      service_type: 'grafana',
-      project_vpc_id: null,
-      user_config: {},
-      tags: {},
-    };
-    for (let i = 0; i < data?.projects.length; i++) {
-      const projectName = data?.projects[i].project_name;
-
-      // validating the equinix key:
-      const config = {
-        method: 'post',
-        url: `https://api.aiven.io/v1/project/${projectName}/service`,
-        headers: {
-          Accept: 'application/json',
-          Authorization: `aivenv1 ${apiKey}`,
-        },
-        data: databody,
-      };
-
-      let dataRes;
-
-      try {
-        await axios(config).then(function (response) {
-          dataRes = response.data;
-        });
-      } catch (err) {
-        console.log(err.response.data.error);
-        console.log(err.response);
-      }
-
-      if (dataRes?.service) {
-        return dataRes.service.service_uri_params;
-      }
-    }
-
-    // if no project works, just trhows error
-    throw new BadRequestException('Grafana service deploy failed', {
-      cause: new Error(),
-      description: 'Grafana service deploy failed',
-    });
-  }
-
-  async storeDb() {
-    const data = await this.prisma.xnodeClaimActivities.findMany();
-    const csv = Papa.unparse(data);
-
-    const filePath = path.join(__dirname, 'xnodeClaimActivities.csv');
-    fs.writeFileSync(filePath, csv);
-
-    return { message: 'CSV file created', filePath };
   }
 }

@@ -30,5 +30,4 @@ export class UsersController {
   constructor(private readonly utilsService: UtilsService) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
-  deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 }

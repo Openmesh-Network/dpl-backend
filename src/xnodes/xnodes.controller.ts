@@ -30,9 +30,11 @@ import {
   GetXnodeDto,
   XnodeHeartbeatDto,
   GetXnodeServiceDto,
-  StoreXnodeData,
-  StoreXnodeSigningMessageDataDTO,
+  PushXnodeServiceDto,
   UpdateXnodeDto,
+  XnodeStatusDto,
+  XnodeGetGenerationDto,
+  XnodePushGenerationDto,
 } from './dto/xnodes.dto';
 import { TestingService } from './testing.service';
 
@@ -45,7 +47,6 @@ export class XnodesController {
   ) {}
 
   apiTokenKey = process.env.API_TOKEN_KEY;
-  deeplinkSignature = process.env.DEEPLINK_TEAM_SIGNATURE;
 
   @ApiOperation({
     summary: 'Create a xnode',
@@ -62,11 +63,73 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Push xnode heartbeat including resource metrics',
+    summary: 'Returns the config generation numbers for the Xnode.',
+  })
+  @Post('getXnodeGeneration')
+  getXnodeGeneration(@Body() data: XnodeGetGenerationDto, @Req() req: Request) {
+    return this.xnodesService.getXnodeGeneration(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Increments the configuration generation which signals a new configuration was applied.',
+  })
+  @Post('pushXnodeGenerationConfig')
+  pushXnodeGenerationConfig(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+    return this.xnodesService.pushXnodeGeneration(data, req, true);
+  }
+
+  @ApiOperation({
+    summary: 'Increments the update generation which signals a new update was applied.',
+  })
+  @Post('pushXnodeGenerationUpdate')
+  pushXnodeGenerationUpdate(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+    return this.xnodesService.pushXnodeGeneration(data, req, false);
+  }
+
+  @ApiOperation({
+    summary: 'Increments the generation number which prompts the Xnode to update.',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('allowXnodeGenerationConfig')
+  allowXnodeGenerationConfig(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+
+    return this.xnodesService.allowXnodeGeneration(data, req, true);
+  }
+
+  @ApiOperation({
+    summary: 'Increments the generation number which prompts the Xnode to update.',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('allowXnodeGenerationUpdate')
+  allowXnodeGenerationUpdate(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+
+    return this.xnodesService.allowXnodeGeneration(data, req, false);
+  }
+
+  @ApiOperation({
+    summary: 'Push xnode heartbeat including resource metrics.',
   })
   @Post('pushXnodeHeartbeat')
   pushXnodeHeartbeat(@Body() data: XnodeHeartbeatDto, @Req() req: Request) {
     return this.xnodesService.pushXnodeHeartbeat(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Push xnode status to determine whether it\'s building or not.',
+  })
+  @Post('pushXnodeStatus')
+  pushXnodeStatus(@Body() data: XnodeStatusDto, @Req() req: Request) {
+    return this.xnodesService.pushXnodeStatus(data, req);
   }
 
   @ApiOperation({
@@ -78,22 +141,15 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Store xnode signing message',
-    description:
-      'If it is a validator, we request the user to sign a message with its wallet so we can know which wallet we are going to mint tokens of staking - the message signed here is: "I want to participate in the Validator beta"',
+    summary: 'Pushes the services',
   })
   @ApiHeader({
-    name: 'x-deeeplink-team-signature',
-    description: 'Private token to auth',
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
   })
-  @Post('storeXnodeSigningMessage')
-  storeXnodeSigningMessage(
-    @Body() data: StoreXnodeSigningMessageDataDTO,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.storeXnodeSigningMessage(data, req);
+  @Post('pushXnodeServices')
+  pushXnodeServices(@Body() data: PushXnodeServiceDto, @Req() req: Request) {
+    return this.xnodesService.pushXnodeServices(data, req);
   }
 
   @ApiOperation({
@@ -125,38 +181,6 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Returns general stats and a listing of all nodes validators',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Get('getNodesValidatorsStats')
-  getNodesValidatorsStats(@Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.getNodesValidatorsStats();
-  }
-
-  @ApiOperation({
-    summary:
-      'Returns general stats and a listing of all nodes validators, and also returns the data about a specific xnode',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('getXnodeWithNodesValidatorsStats')
-  getXnodeWithNodesValidatorsStats(
-    @Body() data: GetXnodeDto,
-    @Req() req: Request,
-  ) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.getXnodeWithNodesValidatorsStats(data);
-  }
-
-  @ApiOperation({
     summary: 'Returns all user xnodes',
   })
   @ApiHeader({
@@ -169,32 +193,4 @@ export class XnodesController {
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.getXnodes(req);
   }
-  /*
-  @ApiOperation({
-    summary: 'Returns all user xnodes',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Get('teste')
-  teste(@Body() data: any, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.xnodesService.getXnodeDeploymentLog(data.tagId, data.xnodeId);
-  }
-
-  @ApiOperation({
-    summary: 'test',
-  })
-  @ApiHeader({
-    name: 'X-Parse-Application-Id',
-    description: 'Token mandatory to connect with the app',
-  })
-  @Post('test')
-  test(@Body() data: any, @Req() req: Request) {
-    const apiToken = String(req.headers['x-parse-application-id']);
-    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
-    return this.testingService.createWallet(data.name, data.senha);
-  } */
 }
