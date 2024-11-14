@@ -100,7 +100,7 @@ export class XnodeStatusDto {
   @MaxLength(100)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s id',
+    description: "The xnode's id",
     maxLength: 100,
   })
   id: string;
@@ -109,7 +109,7 @@ export class XnodeStatusDto {
   @IsString()
   @MaxLength(20)
   @ApiProperty({
-    description: 'Status.'
+    description: 'Status.',
   })
   status: string;
 }
@@ -119,7 +119,7 @@ export class XnodeGetGenerationDto {
   @MaxLength(100)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s id',
+    description: "The xnode's id",
     maxLength: 100,
   })
   id: string;
@@ -130,14 +130,14 @@ export class XnodePushGenerationDto {
   @MaxLength(100)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s id',
+    description: "The xnode's id",
     maxLength: 100,
   })
   id: string;
 
   @IsNumber()
   @ApiProperty({
-    description: 'Generation applied'
+    description: 'Generation applied',
   })
   generation: number;
 }
@@ -147,7 +147,7 @@ export class XnodeHeartbeatDto {
   @MaxLength(100)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s id',
+    description: "The xnode's id",
     maxLength: 100,
   })
   id: string;
@@ -155,49 +155,49 @@ export class XnodeHeartbeatDto {
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'Percent CPU used.'
+    description: 'Percent CPU used.',
   })
   cpuPercent: number;
 
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'Maximum CPU used.'
+    description: 'Maximum CPU used.',
   })
   cpuPercentPeek: number;
 
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'RAM used.'
+    description: 'RAM used.',
   })
   ramMbUsed: number;
 
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'Total available RAM'
+    description: 'Total available RAM',
   })
   ramMbTotal: number;
 
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'Total available RAM'
+    description: 'Total available RAM',
   })
   ramMbPeek: number;
 
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'Storage used.'
+    description: 'Storage used.',
   })
   storageMbUsed: number;
 
   @IsNotEmpty()
   @IsNumber()
   @ApiProperty({
-    description: 'Total available storage.'
+    description: 'Total available storage.',
   })
   storageMbTotal: number;
 }
@@ -207,7 +207,7 @@ export class GetXnodeServiceDto {
   @MaxLength(5000)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s id',
+    description: "The xnode's id",
     maxLength: 5000,
   })
   id: string;
@@ -218,7 +218,7 @@ export class PushXnodeServiceDto {
   @MaxLength(5000)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s id',
+    description: "The xnode's id",
     maxLength: 5000,
   })
   id: string;
@@ -227,7 +227,7 @@ export class PushXnodeServiceDto {
   @MaxLength(50000)
   @IsString()
   @ApiProperty({
-    description: 'The xnode\'s services',
+    description: "The xnode's services",
     maxLength: 50000,
   })
   services: string;
@@ -302,4 +302,84 @@ export class ConnectAPI {
     example: '2012-12--32-134--214-213421412-421412',
   })
   apiKey: string;
+}
+
+export class RegisterXnodeDeploymentDto {
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode name',
+    maxLength: 100,
+  })
+  name: string;
+
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'The xnode location',
+    maxLength: 100,
+  })
+  location: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @ApiProperty({
+    required: false,
+    description: 'The xnode desc',
+    maxLength: 1000,
+  })
+  description: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    required: false,
+    description: 'Provider',
+    example: 'equinix',
+  })
+  provider: string;
+
+  @IsNotEmpty()
+  @IsString()
+  // XXX: Might have to allow more than max 50 services.
+  @ApiProperty({
+    required: false,
+    // TODO: Clarify this with good example or whatever.
+    description: 'A json string with all the services.',
+    example: ['{}'],
+  })
+  // It's just an array of JSON objects from the DPL's perspective, it does no parsing really.
+  // TODO: Maybe check validity at this stage? Would involve duplicating definition from frontend...
+  // Frontend check should probably be enough.
+  services: string;
+
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'Authentication token for heartbeats',
+    maxLength: 100,
+  })
+  accessToken: string;
+
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'Unique Xnode Identifier',
+    maxLength: 100,
+  })
+  xnodeId: string;
+
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'Ip address of Xnode machine',
+    maxLength: 100,
+  })
+  ipAddress: string;
 }

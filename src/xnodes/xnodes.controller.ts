@@ -35,6 +35,7 @@ import {
   XnodeStatusDto,
   XnodeGetGenerationDto,
   XnodePushGenerationDto,
+  RegisterXnodeDeploymentDto,
 } from './dto/xnodes.dto';
 import { TestingService } from './testing.service';
 
@@ -71,30 +72,42 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Increments the configuration generation which signals a new configuration was applied.',
+    summary:
+      'Increments the configuration generation which signals a new configuration was applied.',
   })
   @Post('pushXnodeGenerationConfig')
-  pushXnodeGenerationConfig(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+  pushXnodeGenerationConfig(
+    @Body() data: XnodePushGenerationDto,
+    @Req() req: Request,
+  ) {
     return this.xnodesService.pushXnodeGeneration(data, req, true);
   }
 
   @ApiOperation({
-    summary: 'Increments the update generation which signals a new update was applied.',
+    summary:
+      'Increments the update generation which signals a new update was applied.',
   })
   @Post('pushXnodeGenerationUpdate')
-  pushXnodeGenerationUpdate(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+  pushXnodeGenerationUpdate(
+    @Body() data: XnodePushGenerationDto,
+    @Req() req: Request,
+  ) {
     return this.xnodesService.pushXnodeGeneration(data, req, false);
   }
 
   @ApiOperation({
-    summary: 'Increments the generation number which prompts the Xnode to update.',
+    summary:
+      'Increments the generation number which prompts the Xnode to update.',
   })
   @ApiHeader({
     name: 'X-Parse-Application-Id',
     description: 'Token mandatory to connect with the app',
   })
   @Post('allowXnodeGenerationConfig')
-  allowXnodeGenerationConfig(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+  allowXnodeGenerationConfig(
+    @Body() data: XnodePushGenerationDto,
+    @Req() req: Request,
+  ) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
 
@@ -102,14 +115,18 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Increments the generation number which prompts the Xnode to update.',
+    summary:
+      'Increments the generation number which prompts the Xnode to update.',
   })
   @ApiHeader({
     name: 'X-Parse-Application-Id',
     description: 'Token mandatory to connect with the app',
   })
   @Post('allowXnodeGenerationUpdate')
-  allowXnodeGenerationUpdate(@Body() data: XnodePushGenerationDto, @Req() req: Request) {
+  allowXnodeGenerationUpdate(
+    @Body() data: XnodePushGenerationDto,
+    @Req() req: Request,
+  ) {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
 
@@ -125,7 +142,7 @@ export class XnodesController {
   }
 
   @ApiOperation({
-    summary: 'Push xnode status to determine whether it\'s building or not.',
+    summary: "Push xnode status to determine whether it's building or not.",
   })
   @Post('pushXnodeStatus')
   pushXnodeStatus(@Body() data: XnodeStatusDto, @Req() req: Request) {
@@ -192,5 +209,22 @@ export class XnodesController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.getXnodes(req);
+  }
+
+  @ApiOperation({
+    summary: 'Register an Xnode Deployment',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Post('registerXnodeDeployment')
+  registerXnodeDeployment(
+    @Body() data: RegisterXnodeDeploymentDto,
+    @Req() req: Request,
+  ) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.xnodesService.registerXnodeDeployment(data, req);
   }
 }

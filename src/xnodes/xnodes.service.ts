@@ -1,19 +1,12 @@
 /* eslint-disable prefer-const */
-import {
-  Injectable,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 
 import { ethers } from 'ethers';
 
 import Decimal from 'decimal.js';
 Decimal.set({ precision: 60 });
 
-import {
-  KeyObject,
-  createHmac,
-  createSecretKey
-} from 'crypto' // NodeJS native crypto lib
+import { KeyObject, createHmac, createSecretKey } from 'crypto'; // NodeJS native crypto lib
 
 import { PrismaService } from '../database/prisma.service';
 import { Request } from 'express';
@@ -30,6 +23,7 @@ import {
   GetXnodeServiceDto,
   PushXnodeServiceDto,
   UpdateXnodeDto,
+  RegisterXnodeDeploymentDto,
 } from './dto/xnodes.dto';
 import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
 import { generateUUID16 } from './utils/uuidGenerator';
@@ -65,20 +59,21 @@ export class XnodesService {
       },
     });
 
-    console.log("CreateXnode request")
+    console.log('CreateXnode request');
 
     // XXX: Handle more elegantly? Maybe offer user the chance to delete Xnodes.
     // This actually works OK for now. Just important to note.
-    const MAX_DEPLOYMENTS = 100
+    const MAX_DEPLOYMENTS = 100;
     if (deployments.length > MAX_DEPLOYMENTS) {
       throw new BadRequestException('Xnode limit reached', {
         cause: new Error(),
-        description: 'Xnode deployment limit of ' + MAX_DEPLOYMENTS + ' reached',
+        description:
+          'Xnode deployment limit of ' + MAX_DEPLOYMENTS + ' reached',
       });
     }
 
     // INPUT VALIDATION, dataBody is XnodeDto
-    const { services, ...xnodeData } = dataBody; 
+    const { services, ...xnodeData } = dataBody;
 
     console.log('Final services:');
     console.log(services);
@@ -87,114 +82,129 @@ export class XnodesService {
     // Will be replaced with PSK + HMAC at some point.
     let xnodePresharedKey: KeyObject;
     const buffer = require('crypto').randomBytes(64).toString('hex'); // TODO: handle err on creation of key
-    xnodePresharedKey = createSecretKey(buffer, 'hex')
+    xnodePresharedKey = createSecretKey(buffer, 'hex');
     const xnodeAccessToken = xnodePresharedKey.export().toString('base64');
-    const xnodeId = generateUUID16()
+    const xnodeId = generateUUID16();
 
     if (xnodeData.isUnit) {
-
-      let allowedTokenIdChars = "0123456789"
+      let allowedTokenIdChars = '0123456789';
       for (let char of xnodeData.deploymentAuth) {
         if (!allowedTokenIdChars.includes(char)) {
           throw new Error(`Invalid NFT TokenId`);
         }
       }
 
-      let tokenId = BigInt(xnodeData.deploymentAuth)
-      let nftOwner = ""
-      { // Check web3Address owns NFT.
+      let tokenId = BigInt(xnodeData.deploymentAuth);
+      let nftOwner = '';
+      {
+        // Check web3Address owns NFT.
         try {
           // XXX: Further testing is required.
-          console.log("Token id: ", tokenId)
+          console.log('Token id: ', tokenId);
           // TODO: Consider caching these requests. We are charged by usage.
-          nftOwner = await this.XuContractConnect.ownerOf(tokenId)
+          nftOwner = await this.XuContractConnect.ownerOf(tokenId);
 
-          console.log('Nft owner: ', nftOwner)
-          console.log('Nft owner: ', user.web3Address)
+          console.log('Nft owner: ', nftOwner);
+          console.log('Nft owner: ', user.web3Address);
         } catch (err) {
-          console.error("Code: ", err.code)
-          console.error("Reason: ", err.reason)
-          console.error("Error: ", err)
+          console.error('Code: ', err.code);
+          console.error('Reason: ', err.reason);
+          console.error('Error: ', err);
         }
 
-        if(nftOwner != user.web3Address || nftOwner == "") {
+        if (nftOwner != user.web3Address || nftOwner == '') {
           throw new Error(`You don't own the NFT`);
         }
       }
 
-      let nftMintDate = undefined
-      console.log("Checking NFT date.")
+      let nftMintDate = undefined;
+      console.log('Checking NFT date.');
 
       // TODO: Consider caching these requests. We are charged by usage.
-      { // Check NFT date.
+      {
+        // Check NFT date.
         try {
           // XXX: Not all RPC providers support events.
           // Works with our ankr API.
-          const filter = this.XuContractConnect.filters.Transfer(null, null, tokenId);
-          const events = await this.XuContractConnect.queryFilter(filter)
+          const filter = this.XuContractConnect.filters.Transfer(
+            null,
+            null,
+            tokenId,
+          );
+          const events = await this.XuContractConnect.queryFilter(filter);
 
-          const mintEvent = events.find(event => event.args.from === ethers.constants.AddressZero)
+          const mintEvent = events.find(
+            (event) => event.args.from === ethers.constants.AddressZero,
+          );
 
           if (!mintEvent) {
-            const errString = "This error shouldn't run. This means the NFT has an owner despite it never being minted."
-            console.error(errString)
-            throw new Error(errString)
+            const errString =
+              "This error shouldn't run. This means the NFT has an owner despite it never being minted.";
+            console.error(errString);
+            throw new Error(errString);
           } else {
-            const block = await this.web3Provider.getBlock(mintEvent.blockNumber)
+            const block = await this.web3Provider.getBlock(
+              mintEvent.blockNumber,
+            );
 
             if (!block) {
-              const errString = "This error shouldn't run. This means the NFT was minted on a non-existent block."
-              console.error(errString)
-              throw new Error(errString)
+              const errString =
+                "This error shouldn't run. This means the NFT was minted on a non-existent block.";
+              console.error(errString);
+              throw new Error(errString);
             } else {
-              nftMintDate = new Date(1000 * block.timestamp)
+              nftMintDate = new Date(1000 * block.timestamp);
             }
           }
-        } catch(err) {
-          console.error(err)
-          throw new Error("Error getting NFT date.")
+        } catch (err) {
+          console.error(err);
+          throw new Error('Error getting NFT date.');
         }
       }
 
       if (!nftMintDate) {
-        throw new Error("No NFT mint date.")
+        throw new Error('No NFT mint date.');
       }
 
       // Check if the NFT is already in the database.
       {
         // TODO: Add flag to change this behaviour.
 
-        console.log("Deleting any deployments with a matching nft.")
+        console.log('Deleting any deployments with a matching nft.');
 
         // If the NFT is already in the database, we have to delete it.
         const result = await this.prisma.$transaction(async (prisma) => {
           let duplicateNftServers = await prisma.deployment.findMany({
             where: {
-              deploymentAuth: xnodeData.deploymentAuth
-            }
-          })
+              deploymentAuth: xnodeData.deploymentAuth,
+            },
+          });
 
-          console.log("Found: " + duplicateNftServers.length + " servers matching nft..");
+          console.log(
+            'Found: ' + duplicateNftServers.length + ' servers matching nft..',
+          );
 
           for (let i = 0; i < duplicateNftServers.length; i++) {
-            console.log("Deleting server: ", duplicateNftServers[i].id)
+            console.log('Deleting server: ', duplicateNftServers[i].id);
             await prisma.deployment.deleteMany({
               where: {
-                deploymentAuth: duplicateNftServers[i].deploymentAuth
-              }
-            })
+                deploymentAuth: duplicateNftServers[i].deploymentAuth,
+              },
+            });
           }
-        })
+        });
 
-        console.log(result)
+        console.log(result);
       }
 
-      console.log("Nft mint date: ", nftMintDate)
+      console.log('Nft mint date: ', nftMintDate);
 
-      let ipAddress = ""
+      let ipAddress = '';
       {
-        if (process.env.MOCK_DEPLOYMENT == "1") {
-          console.log("Mock deployment enabled, not talking to any APIs or controller")
+        if (process.env.MOCK_DEPLOYMENT == '1') {
+          console.log(
+            'Mock deployment enabled, not talking to any APIs or controller',
+          );
         } else {
           // Talk to the unit controller API. - Needs refactoring
           let controllerUrl = this.XU_CONTROLLER_URL;
@@ -202,7 +212,7 @@ export class XnodesService {
 
           // TODO: Test this, doesn't look correct:
           headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
-          headers.set('Content-Type', 'application/json')
+          headers.set('Content-Type', 'application/json');
           let controllerPayload = JSON.stringify({
             // Get the walletAddress for the user from prisma.
             // WalletAddress: user.walletAddress,
@@ -213,33 +223,35 @@ export class XnodesService {
           });
 
           // Attempt provisioning (should only be done once) XXX
-          console.log("Controller url: ", controllerUrl)
+          console.log('Controller url: ', controllerUrl);
 
           const provisionRequest: RequestInfo = new Request(controllerUrl, {
             method: `POST`,
             headers: headers,
             body: controllerPayload,
           });
-          let provisionUrl = controllerUrl + "/provision/" + tokenId;
+          let provisionUrl = controllerUrl + '/provision/' + tokenId;
 
-          console.log(provisionUrl)
+          console.log(provisionUrl);
 
           const response = await fetch(provisionUrl, provisionRequest);
           if (!response.ok) {
             // XXX: Print the body.
-            let message = await response.json()
-            console.log(message)
+            let message = await response.json();
+            console.log(message);
 
-            throw new Error(`Error! status: ${response.status}, message: ${message}`);
+            throw new Error(
+              `Error! status: ${response.status}, message: ${message}`,
+            );
           }
 
-          let body = await response.json()
+          let body = await response.json();
 
           if (response.ok) {
-            ipAddress = body.ipAddress
-            console.log("")
+            ipAddress = body.ipAddress;
+            console.log('');
           } else {
-            console.log("Couldn't provision unit: " + body.message)
+            console.log("Couldn't provision unit: " + body.message);
             throw new Error(`Unable to provision Xnode Unit`);
           }
         }
@@ -256,7 +268,7 @@ export class XnodesService {
           ipAddress: ipAddress,
           unitClaimTime: nftMintDate,
           deploymentAuth: xnodeData.deploymentAuth,
-          status: "booting",
+          status: 'booting',
           configGenerationHave: 0,
           // NOTE: Generation must be one so that the xnode will reconfigure on first boot!
           configGenerationWant: 1,
@@ -267,71 +279,75 @@ export class XnodesService {
       });
 
       if (!xnode) {
-        const errMessage = "Failed adding to database";
+        const errMessage = 'Failed adding to database';
         console.error(errMessage);
         throw new Error(errMessage);
       }
 
       console.log('Added Xnode to the database');
-      console.log("Xnode deployed");
+      console.log('Xnode deployed');
 
-      return xnode
-    } else { // Non Xnode units.
+      return xnode;
+    } else {
+      // Non Xnode units.
       // TODO: Connect to xnode deployment backend instead.
-      console.error("Not currently supported...")
-      throw new Error("Not currently supported.")
+      console.error('Not currently supported...');
+      throw new Error('Not currently supported.');
     }
   }
 
   generate_hmac(accessToken, message) {
-    let preSharedKey = createSecretKey(accessToken, 'base64')
-    const computedHmac = createHmac('sha256', preSharedKey).update(message, 'utf8').digest('hex');
-    return computedHmac
+    let preSharedKey = createSecretKey(accessToken, 'base64');
+    const computedHmac = createHmac('sha256', preSharedKey)
+      .update(message, 'utf8')
+      .digest('hex');
+    return computedHmac;
   }
 
   verifyHmac(accessToken, message, claimedHmac) {
     // accessToken is passed as base64
-    console.log("Computing hmac for message:", message)
-    let realHmac = this.generate_hmac(accessToken, message)
-    let verified = realHmac === claimedHmac
-    console.log("Hmac computed: ", realHmac, "matched:", verified)
-    return verified
+    console.log('Computing hmac for message:', message);
+    let realHmac = this.generate_hmac(accessToken, message);
+    let verified = realHmac === claimedHmac;
+    console.log('Hmac computed: ', realHmac, 'matched:', verified);
+    return verified;
   }
 
   async getXnodeServices(dataBody: GetXnodeServiceDto, req: Request) {
-    const unverifiedHmac = String(req.headers['x-parse-session-token']); 
+    const unverifiedHmac = String(req.headers['x-parse-session-token']);
 
     // XXX: Needs anti-spam measures.
     const node = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
-      }
-    })
-    console.log("Got services for node. ID: ", node.id, ", accessToken: ", node.accessToken)
-    let preSharedKey = Buffer.from(node.accessToken, 'base64').toString('hex')
-    console.log("Decoded access token: ", preSharedKey)
+      },
+    });
+    console.log(
+      'Got services for node. ID: ',
+      node.id,
+      ', accessToken: ',
+      node.accessToken,
+    );
+    let preSharedKey = Buffer.from(node.accessToken, 'base64').toString('hex');
+    console.log('Decoded access token: ', preSharedKey);
 
-
-    let jsonMessage = JSON.stringify(dataBody)
+    let jsonMessage = JSON.stringify(dataBody);
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
       let expiry = new Date().getTime() + 30 * 1000; // 30 seconds
-      let message = JSON.stringify(
-        {
-          "xnode_config": node.services,
-          "expiry": expiry
-        }
-      )
-      let msg_hmac = this.generate_hmac(node.accessToken, message)
-      console.log("Creating hmac for", message)
-      console.log(msg_hmac)
+      let message = JSON.stringify({
+        xnode_config: node.services,
+        expiry: expiry,
+      });
+      let msg_hmac = this.generate_hmac(node.accessToken, message);
+      console.log('Creating hmac for', message);
+      console.log(msg_hmac);
       return {
         message,
-        "hmac": msg_hmac
-      }
-
+        hmac: msg_hmac,
+      };
     } else {
-      throw new Error("Invalid HMAC, is your access token correct?")
+      throw new Error('Invalid HMAC, is your access token correct?');
     }
   }
 
@@ -341,12 +357,17 @@ export class XnodesService {
       accessToken,
     );
 
-    console.log("Request to update services from user: ", user.id, "request: ", dataBody)
+    console.log(
+      'Request to update services from user: ',
+      user.id,
+      'request: ',
+      dataBody,
+    );
 
     if (!user) {
-      throw new Error("Unauthorized user.")
+      throw new Error('Unauthorized user.');
     } else {
-      console.log("Setting services for node. ID: ", dataBody.id)
+      console.log('Setting services for node. ID: ', dataBody.id);
 
       let node = await this.prisma.deployment.findFirst({
         where: {
@@ -356,13 +377,13 @@ export class XnodesService {
             },
             {
               openmeshExpertUserId: user.id,
-            }
+            },
           ],
-        }
-      })
+        },
+      });
 
       // Actually update.
-      console.log('Pushing new configuration to the xnode.')
+      console.log('Pushing new configuration to the xnode.');
 
       await this.prisma.deployment.updateMany({
         where: {
@@ -372,38 +393,38 @@ export class XnodesService {
             },
             {
               openmeshExpertUserId: user.id,
-            }
-          ]
+            },
+          ],
         },
         data: {
           services: dataBody.services,
 
           // This will notify the xnode to actually reconfigure.
-          configGenerationWant: node.configGenerationWant + 1
-        }
-      })
+          configGenerationWant: node.configGenerationWant + 1,
+        },
+      });
     }
   }
 
   async pushXnodeHeartbeat(dataBody: XnodeHeartbeatDto, req: Request) {
     const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
-    const { id, ...data} = dataBody;
+    const { id, ...data } = dataBody;
 
     const node = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
-      }
-    })
-    let jsonMessage = JSON.stringify(dataBody)
+      },
+    });
+    let jsonMessage = JSON.stringify(dataBody);
 
     if (node) {
       if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
         try {
-          let status = node.status
+          let status = node.status;
 
-          if (node.status == "booting") {
-            status = "booted"
+          if (node.status == 'booting') {
+            status = 'booted';
           }
 
           await this.prisma.deployment.updateMany({
@@ -412,21 +433,20 @@ export class XnodesService {
             },
             data: {
               heartbeatData: JSON.stringify(data),
-              status: status
-            }
-          })
-
-        } catch(err) {
+              status: status,
+            },
+          });
+        } catch (err) {
           throw new BadRequestException('Failed to authenticate', {
             cause: new Error(),
-            description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+            description: "Couldn't authenticate Xnode / Xnode id is invalid.",
           });
         }
       } else {
-        throw new Error("Invalid HMAC, is your access token correct?")
+        throw new Error('Invalid HMAC, is your access token correct?');
       }
     } else {
-      throw new Error("No node found with id: " + dataBody.id)
+      throw new Error('No node found with id: ' + dataBody.id);
     }
   }
 
@@ -436,36 +456,39 @@ export class XnodesService {
     const node = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
-      }
-    })
+      },
+    });
 
-    let jsonMessage = JSON.stringify(dataBody)
+    let jsonMessage = JSON.stringify(dataBody);
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
       return {
         configWant: node.configGenerationWant,
         configHave: node.configGenerationHave,
         updateWant: node.updateGenerationWant,
-        updateHave: node.updateGenerationHave
-      }
+        updateHave: node.updateGenerationHave,
+      };
     } else {
-      throw new Error("Invalid HMAC, is your access token correct?")
+      throw new Error('Invalid HMAC, is your access token correct?');
     }
   }
 
-  async pushXnodeGeneration(dataBody: XnodePushGenerationDto, req: Request, isConfigGeneration: boolean) {
+  async pushXnodeGeneration(
+    dataBody: XnodePushGenerationDto,
+    req: Request,
+    isConfigGeneration: boolean,
+  ) {
     const unverifiedHmac = String(req.headers['x-parse-session-token']); // XXX: Rename session token to avoid confusion with browser sessions.
 
     const node = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
-      }
-    })
-    let jsonMessage = JSON.stringify(dataBody)
+      },
+    });
+    let jsonMessage = JSON.stringify(dataBody);
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
       try {
-
         if (isConfigGeneration) {
           await this.prisma.deployment.updateMany({
             where: {
@@ -473,8 +496,8 @@ export class XnodesService {
             },
             data: {
               configGenerationHave: dataBody.generation,
-            }
-          })
+            },
+          });
         } else {
           await this.prisma.deployment.updateMany({
             where: {
@@ -482,28 +505,32 @@ export class XnodesService {
             },
             data: {
               updateGenerationHave: dataBody.generation,
-            }
-          })
+            },
+          });
         }
-      } catch(err) {
+      } catch (err) {
         throw new BadRequestException('Failed to authenticate', {
           cause: new Error(),
-          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+          description: "Couldn't authenticate Xnode / Xnode id is invalid.",
         });
       }
     } else {
-      throw new Error("Invalid HMAC, is your access token correct?")
+      throw new Error('Invalid HMAC, is your access token correct?');
     }
   }
 
-  async allowXnodeGeneration(dataBody: XnodePushGenerationDto, req: Request, isConfigGeneration: boolean) {
-    console.log('Incrementing want generation.')
+  async allowXnodeGeneration(
+    dataBody: XnodePushGenerationDto,
+    req: Request,
+    isConfigGeneration: boolean,
+  ) {
+    console.log('Incrementing want generation.');
     const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
       sessionToken,
     );
 
-    console.log('Running database query')
+    console.log('Running database query');
     const xnode = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
@@ -513,7 +540,7 @@ export class XnodesService {
 
     if (xnode) {
       try {
-        console.log('Updating database')
+        console.log('Updating database');
 
         if (isConfigGeneration) {
           await this.prisma.deployment.updateMany({
@@ -522,9 +549,9 @@ export class XnodesService {
             },
             data: {
               configGenerationWant: dataBody.generation,
-              status: "pending reconfiguration"
-            }
-          })
+              status: 'pending reconfiguration',
+            },
+          });
         } else {
           await this.prisma.deployment.updateMany({
             where: {
@@ -532,19 +559,18 @@ export class XnodesService {
             },
             data: {
               updateGenerationWant: dataBody.generation,
-              status: "pending update"
-            }
-          })
+              status: 'pending update',
+            },
+          });
         }
-
-      } catch(err) {
+      } catch (err) {
         throw new BadRequestException('Failed to authenticate', {
           cause: new Error(),
-          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+          description: "Couldn't authenticate Xnode / Xnode id is invalid.",
         });
       }
     } else {
-      throw new Error("No xnode with id found.")
+      throw new Error('No xnode with id found.');
     }
   }
 
@@ -556,9 +582,9 @@ export class XnodesService {
     const node = await this.prisma.deployment.findFirst({
       where: {
         id: dataBody.id,
-      }
-    })
-    let jsonMessage = JSON.stringify(dataBody)
+      },
+    });
+    let jsonMessage = JSON.stringify(dataBody);
 
     if (this.verifyHmac(node.accessToken, jsonMessage, unverifiedHmac)) {
       try {
@@ -568,16 +594,16 @@ export class XnodesService {
           },
           data: {
             status: data.status,
-          }
-        })
-      } catch(err) {
+          },
+        });
+      } catch (err) {
         throw new BadRequestException('Failed to authenticate', {
           cause: new Error(),
-          description: 'Couldn\'t authenticate Xnode / Xnode id is invalid.',
+          description: "Couldn't authenticate Xnode / Xnode id is invalid.",
         });
       }
     } else {
-      throw new Error("Invalid HMAC, is your access token correct?")
+      throw new Error('Invalid HMAC, is your access token correct?');
     }
   }
 
@@ -703,7 +729,7 @@ export class XnodesService {
     const config = {
       method: 'post',
       url: `https://mainnet.ethereum.validationcloud.io/v1/${dataBody.apiKey}`,
-        headers: {
+      headers: {
         Accept: 'application/json',
       },
       data: dataBodyAPI,
@@ -761,7 +787,7 @@ export class XnodesService {
     const config = {
       method: 'post',
       url: `https://mainnet.polygon.validationcloud.io/v1/${dataBody.apiKey}`,
-        headers: {
+      headers: {
         Accept: 'application/json',
       },
       data: dataBodyAPI,
@@ -800,5 +826,59 @@ export class XnodesService {
     });
 
     return;
+  }
+
+  async registerXnodeDeployment(
+    dataBody: RegisterXnodeDeploymentDto,
+    req: Request,
+  ) {
+    const sessionToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      sessionToken,
+    );
+
+    console.log('RegisterXnodeDeployment request');
+
+    // INPUT VALIDATION, dataBody is RegisterXnodeDeploymentDto
+    const { services, ...xnodeData } = dataBody;
+
+    let duplicateServers = await this.prisma.deployment.findFirst({
+      where: {
+        id: xnodeData.xnodeId,
+      },
+    });
+    if (duplicateServers) {
+      const errMessage = 'Xnode with this id already exists';
+      console.error(errMessage);
+      throw new Error(errMessage);
+    }
+
+    // Add the xnode deployment to our database.
+    const xnode = await this.prisma.deployment.create({
+      data: {
+        id: xnodeData.xnodeId,
+        openmeshExpertUserId: user.id,
+        services: services,
+        deploymentAuth: '',
+        status: 'booting',
+        configGenerationHave: 0,
+        // NOTE: Generation must be one so that the xnode will reconfigure on first boot!
+        configGenerationWant: 1,
+        updateGenerationHave: 0,
+        updateGenerationWant: 0,
+        ...xnodeData,
+      },
+    });
+
+    if (!xnode) {
+      const errMessage = 'Failed adding to database';
+      console.error(errMessage);
+      throw new Error(errMessage);
+    }
+
+    console.log('Added Xnode to the database');
+    console.log('Xnode deployed');
+
+    return xnode;
   }
 }
