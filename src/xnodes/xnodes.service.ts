@@ -844,7 +844,7 @@ export class XnodesService {
 
     let duplicateServers = await this.prisma.deployment.findFirst({
       where: {
-        id: xnodeData.xnodeId,
+        id: xnodeData.id,
       },
     });
     if (duplicateServers) {
@@ -856,7 +856,6 @@ export class XnodesService {
     // Add the xnode deployment to our database.
     const xnode = await this.prisma.deployment.create({
       data: {
-        id: xnodeData.xnodeId,
         openmeshExpertUserId: user.id,
         services: services,
         deploymentAuth: '',

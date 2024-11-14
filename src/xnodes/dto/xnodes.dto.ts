@@ -372,7 +372,7 @@ export class RegisterXnodeDeploymentDto {
     description: 'Unique Xnode Identifier',
     maxLength: 100,
   })
-  xnodeId: string;
+  id: string;
 
   @IsNotEmpty()
   @MaxLength(100)
