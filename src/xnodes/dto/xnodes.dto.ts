@@ -382,4 +382,13 @@ export class RegisterXnodeDeploymentDto {
     maxLength: 100,
   })
   ipAddress: string;
+
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'Additional information required to identify the machine',
+    maxLength: 100,
+  })
+  deploymentAuth: string;
 }
