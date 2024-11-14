@@ -374,7 +374,7 @@ export class RegisterXnodeDeploymentDto {
   })
   id: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(100)
   @IsString()
   @ApiProperty({
@@ -383,7 +383,7 @@ export class RegisterXnodeDeploymentDto {
   })
   ipAddress: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(100)
   @IsString()
   @ApiProperty({
