@@ -661,11 +661,56 @@ export class XnodesService {
       accessToken,
     );
 
-    return await this.prisma.deployment.findMany({
+    const xnodes = await this.prisma.deployment.findMany({
       where: {
         openmeshExpertUserId: user.id,
       },
     });
+
+    // Start checking missing ip addresses, but dont wait for it to finish
+    Promise.all(
+      xnodes.map(async (xnode) => {
+        if (!xnode.isUnit || xnode.ipAddress) {
+          // It is not a xnode unit or already has an ip address
+          return;
+        }
+
+        const controllerUrl = this.XU_CONTROLLER_URL;
+        const headers: Headers = new Headers();
+
+        headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
+        headers.set('Content-Type', 'application/json');
+        const controllerPayload = JSON.stringify({});
+
+        const provisionRequest: RequestInfo = new Request(controllerUrl, {
+          method: `POST`,
+          headers: headers,
+          body: controllerPayload,
+        });
+        const provisionUrl = controllerUrl + '/info/' + xnode.deploymentAuth;
+
+        const response = await fetch(provisionUrl, provisionRequest);
+        const body = await response.json();
+
+        if (response.ok) {
+          const ipAddress = body.ipAddress;
+          await this.prisma.deployment.update({
+            data: {
+              ipAddress: ipAddress,
+            },
+            where: {
+              id: xnode.id,
+            },
+          });
+        } else {
+          console.error('Couldnt get xnode unit ip address: ' + body.message);
+        }
+      }),
+    ).catch((err) => {
+      console.error('Fetch ip address error', err);
+    });
+
+    return xnodes;
   }
 
   async connectEquinixAPI(dataBody: ConnectAPI, req: Request) {
