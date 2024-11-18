@@ -680,12 +680,10 @@ export class XnodesService {
 
         headers.set(`Authorization`, `Bearer ` + this.XU_CONTROLLER_KEY);
         headers.set('Content-Type', 'application/json');
-        const controllerPayload = JSON.stringify({});
 
         const provisionRequest: RequestInfo = new Request(controllerUrl, {
-          method: `POST`,
+          method: `GET`,
           headers: headers,
-          body: controllerPayload,
         });
         const provisionUrl = controllerUrl + '/info/' + xnode.deploymentAuth;
 
