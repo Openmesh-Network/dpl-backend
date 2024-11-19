@@ -608,7 +608,6 @@ export class XnodesService {
   }
 
   async updateXnode(dataBody: UpdateXnodeDto, req: Request) {
-    // TODO: Double check this function works as expected.
     const sessionToken = String(req.headers['x-parse-session-token']);
     const user = await this.openmeshExpertsAuthService.verifySessionToken(
       sessionToken,
@@ -632,8 +631,8 @@ export class XnodesService {
 
     return await this.prisma.deployment.update({
       data: {
-        status: status,
-        ...finalBody,
+        name: finalBody.name,
+        description: finalBody.description ?? xnode.description,
       },
       where: {
         id: xnodeId,
