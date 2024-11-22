@@ -392,3 +392,14 @@ export class RegisterXnodeDeploymentDto {
   })
   deploymentAuth: string;
 }
+
+export class RemoveXnodeDeploymentDto {
+  @IsNotEmpty()
+  @MaxLength(100)
+  @IsString()
+  @ApiProperty({
+    description: 'Unique Xnode Identifier',
+    maxLength: 100,
+  })
+  id: string;
+}

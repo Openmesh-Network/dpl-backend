@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UseGuards,
   Put,
+  Delete,
 } from '@nestjs/common';
 
 import {
@@ -36,6 +37,7 @@ import {
   XnodeGetGenerationDto,
   XnodePushGenerationDto,
   RegisterXnodeDeploymentDto,
+  RemoveXnodeDeploymentDto,
 } from './dto/xnodes.dto';
 import { TestingService } from './testing.service';
 
@@ -226,5 +228,22 @@ export class XnodesController {
     const apiToken = String(req.headers['x-parse-application-id']);
     if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
     return this.xnodesService.registerXnodeDeployment(data, req);
+  }
+
+  @ApiOperation({
+    summary: 'Remove an Xnode Deployment',
+  })
+  @ApiHeader({
+    name: 'X-Parse-Application-Id',
+    description: 'Token mandatory to connect with the app',
+  })
+  @Delete('removeXnodeDeployment')
+  removeXnodeDeployment(
+    @Body() data: RemoveXnodeDeploymentDto,
+    @Req() req: Request,
+  ) {
+    const apiToken = String(req.headers['x-parse-application-id']);
+    if (apiToken !== this.apiTokenKey) throw new UnauthorizedException();
+    return this.xnodesService.removeXnodeDeployment(data, req);
   }
 }

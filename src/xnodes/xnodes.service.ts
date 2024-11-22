@@ -24,6 +24,7 @@ import {
   PushXnodeServiceDto,
   UpdateXnodeDto,
   RegisterXnodeDeploymentDto,
+  RemoveXnodeDeploymentDto,
 } from './dto/xnodes.dto';
 import { XnodeUnitContract } from 'src/contracts/XunitContractABI';
 import { generateUUID16 } from './utils/uuidGenerator';
@@ -919,6 +920,50 @@ export class XnodesService {
 
     console.log('Added Xnode to the database');
     console.log('Xnode deployed');
+
+    return xnode;
+  }
+
+  async removeXnodeDeployment(
+    dataBody: RemoveXnodeDeploymentDto,
+    req: Request,
+  ) {
+    const sessionToken = String(req.headers['x-parse-session-token']);
+    const user = await this.openmeshExpertsAuthService.verifySessionToken(
+      sessionToken,
+    );
+
+    console.log('RemoveXnodeDeployment request');
+
+    // INPUT VALIDATION, dataBody is RemoveXnodeDeploymentDto
+    const { ...xnodeData } = dataBody;
+
+    const xnode = await this.prisma.deployment.findFirst({
+      where: {
+        id: xnodeData.id,
+      },
+    });
+    if (xnode.openmeshExpertUserId !== user.id) {
+      const errMessage = `User does not own Xnode with id ${xnodeData.id}`;
+      console.error(errMessage);
+      throw new Error(errMessage);
+    }
+
+    // Remove the xnode deployment from our database.
+    const removedXnode = await this.prisma.deployment.delete({
+      where: {
+        id: xnodeData.id,
+      },
+    });
+
+    if (!removedXnode) {
+      const errMessage = 'Failed removing from database';
+      console.error(errMessage);
+      throw new Error(errMessage);
+    }
+
+    console.log('Removed Xnode from the database');
+    console.log('Xnode removed');
 
     return xnode;
   }
